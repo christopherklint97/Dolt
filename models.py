@@ -2,13 +2,13 @@
 
 import datetime
 
+from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 
-bcrypt = Bcrypt()
 db = SQLAlchemy()
 
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     """ Users in the app """
 
     __tablename__ = 'users'

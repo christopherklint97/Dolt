@@ -3,12 +3,15 @@ autopep8==1.5.4
 backcall==0.2.0
 blinker==1.4
 certifi==2020.6.20
+cffi==1.14.3
 chardet==3.0.4
 click==7.1.2
+cryptography==3.2.1
 decorator==4.4.2
 Flask==1.1.2
 Flask-Cors==3.0.9
 Flask-DebugToolbar==0.11.0
+Flask-Login==0.5.0
 Flask-SQLAlchemy==2.4.4
 gunicorn==20.0.4
 idna==2.10
@@ -20,6 +23,7 @@ Jinja2==2.11.2
 lazy-object-proxy==1.4.3
 MarkupSafe==1.1.1
 mccabe==0.6.1
+oauthlib==3.1.0
 parso==0.7.1
 pexpect==4.8.0
 pickleshare==0.7.5
@@ -27,8 +31,10 @@ prompt-toolkit==3.0.8
 psycopg2-binary==2.8.6
 ptyprocess==0.6.0
 pycodestyle==2.6.0
+pycparser==2.20
 Pygments==2.7.2
 pylint==2.6.0
+pyOpenSSL==19.1.0
 python-dotenv==0.14.0
 requests==2.24.0
 six==1.15.0
