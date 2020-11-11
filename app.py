@@ -1,41 +1,26 @@
+import requests
+from models import db, connect_db, User, Task, Group, Group_Task
 import os
 
-from flask import Flask, render_template, request, flash, redirect, session, cli
+from flask import Flask, render_template, request, flash, redirect, session, cli, url_for, abort, g
 from flask_cors import CORS
 from flask_debugtoolbar import DebugToolbarExtension
-from flask_login import (
-    LoginManager,
-    current_user,
-    login_required,
-    login_user,
-    logout_user,
-)
-from oauthlib.oauth2 import WebApplicationClient
 
-from models import db, connect_db
+from slack_sdk.oauth import AuthorizeUrlGenerator
+from slack_sdk.web import WebClient
+from slack_sdk.oauth.state_store import FileOAuthStateStore
 
-import requests
 
 app = Flask(__name__)
+
+# Activate CORS for flask app
 CORS(app)
 
 # Load .env variables
 cli.load_dotenv('.env')
 
-# User session management setup
-# https://flask-login.readthedocs.io/en/latest
-login_manager = LoginManager()
-login_manager.init_app(app)
-
-# OAuth 2 client setup
-client = WebApplicationClient(os.environ.get('SLACK_CLIENT_ID', None))
-
-# Flask-Login helper to retrieve a user from our db
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.get(user_id)
+# Issue and consume state parameter value on the server-side.
+state_store = FileOAuthStateStore(expiration_seconds=300, base_dir="./data")
 
 
 # Get DB_URI from environ variable (useful for production/testing) or,
@@ -52,13 +37,44 @@ toolbar = DebugToolbarExtension(app)
 connect_db(app)
 db.create_all()
 
+###############################################################################
+# Before the requests
+
+
+@app.before_request
+def add_user_to_g():
+    """If we're logged in, add curr user to Flask global."""
+
+    if 'CURR_USER_KEY' in session:
+        g.user = User.query.get(session['CURR_USER_KEY'])
+    else:
+        g.user = None
+
+
+def do_login(user):
+    """Log in user."""
+
+    session['CURR_USER_KEY'] = user.id
+
+
+def do_logout():
+    """Logout user."""
+
+    if 'CURR_USER_KEY' in session:
+        del session['CURR_USER_KEY']
+        del session['token']
+
+
+######################################################################################
+# Home, logging in, logging out
 
 @app.route("/")
 def homepage():
     """Show homepage."""
 
-    if current_user.is_authenticated:
+    if g.user:
         # handle the homepage view for a logged in user
+
         return render_template("home.html")
     else:
         return render_template('login.html')
@@ -68,80 +84,92 @@ def homepage():
 def login():
     """Login."""
 
-    # Use oauth library to construct the request for Slack login and provide
-    # scopes that let you retrieve user's profile from Slack
-    request_uri = client.prepare_request_uri(
-        'https://slack.com/oauth/v2/authorize',
-        user_scope="identity.basic"
+    # Generate a random value and store it on the server-side
+    state = state_store.issue()
+
+    # Build https://slack.com/oauth/v2/authorize with sufficient query parameters
+    authorize_url_generator = AuthorizeUrlGenerator(
+        client_id=os.environ.get("SLACK_CLIENT_ID", None),
+        user_scopes=["identity.basic", "identity.email",
+                     "identity.team", "identity.avatar"]
     )
 
-    return redirect(request_uri)
+    redirect_uri = authorize_url_generator.generate(state)
+
+    return redirect(redirect_uri)
 
 
 @app.route("/login/callback")
 def login_callback():
     """Handle callback for the login."""
 
-    # The code parameter is an authorization code that you will exchange for a long-lived access token
-    code = request.args.get("code")
+    # Retrieve the auth code from the request params
+    if "code" in request.args:
+        # Verify the state parameter
+        if state_store.consume(request.args["state"]):
+            client = WebClient()  # no prepared token needed for this
+            # Complete the installation by calling oauth.v2.access API method
+            oauth_response = client.oauth_v2_access(
+                client_id=os.environ.get("SLACK_CLIENT_ID", None),
+                client_secret=os.environ.get("SLACK_CLIENT_SECRET", None),
+                code=request.args["code"]
+            )
 
-    # Prepare and send a request to get tokens! Yay tokens!
-    token_url = client.prepare_token_request(
-        'https://slack.com/api/oauth.v2.access',
-        code=code,
-        client_id=os.environ.get('SLACK_CLIENT_ID', None),
-        client_secret=os.environ.get('SLACK_CLIENT_SLACK', None)
-    )
+            # Check if the request to Slack API was successful
+            if oauth_response['ok'] == True:
+                # Saving access token for the authenticated user in the session
+                token = oauth_response['authed_user']['access_token']
+                session['token'] = token
 
-    token_response = requests.get(token_url)
+                # Requesting the Slack identity of the user
+                client = WebClient(token=token)
+                user_response = client.api_call(
+                    api_method='users.identity',
+                )
 
-    # Parse the tokens!
-    client.parse_request_body_response(json.dumps(token_response.json()))
+                print(user_response)
 
-    # Now that you have tokens (yay) let's find and hit the URL
-    # from Slack that gives you the user's profile information,
-    userinfo_endpoint = 'https://slack.com/api/users.identity'
-    uri = client.add_token(userinfo_endpoint)
-    userinfo_response = requests.get(uri)
+                # Check if the request to Slack API was successful
+                if user_response['ok'] == True:
+                    # Search in db for matching user with Slack ID
+                    slack_user_id = user_response['user']['id']
+                    user = User.query.filter_by(
+                        slack_user_id=slack_user_id).first() or None
 
-    # You want to make sure their email is verified.
-    # The user authenticated with Google, authorized your
-    # app, and now you've verified their email through Google!
-    if userinfo_response.json().get("email_verified"):
-        unique_id = userinfo_response.json()["sub"]
-        users_email = userinfo_response.json()["email"]
-        picture = userinfo_response.json()["picture"]
-        users_name = userinfo_response.json()["given_name"]
-    else:
-        return "User email not available or not verified by Google.", 400
+                    # If user is found, login
+                    if user:
+                        do_login(user)
+                        flash(f"Hello, {user.first_name}!", "success")
 
-    # Create a user in your db with the information provided
-    # by Google
-    user = User(
-        id_=unique_id, name=users_name, email=users_email, profile_pic=picture
-    )
+                    else:
+                        # Add the information from Slack into the db
+                        first_name = user_response['user']['name'].partition(' ')[
+                            0]
+                        last_name = user_response['user']['name'].partition(' ')[
+                            2]
+                        email = user_response['user']['email']
+                        slack_team_id = user_response['team']['id']
+                        slack_img_url = user_response['user']['image_512']
 
-    # Doesn't exist? Add it to the database.
-    if not User.get(unique_id):
-        User.create(unique_id, users_name, users_email, picture)
+                        # Add user to the db
+                        user = User(first_name=first_name, last_name=last_name, email=email,
+                                    slack_user_id=slack_user_id, slack_team_id=slack_team_id, slack_img_url=slack_img_url)
+                        db.session.add(user)
+                        db.session.commit()
 
-    # Begin user session by logging the user in
-    login_user(user)
+                        # Login new user
+                        user = User.query.filter_by(
+                            slack_user_id=slack_user_id).first()
+                        do_login(user)
+                        flash(f"Hello, {user.first_name}!", "success")
 
-    # Send user back to homepage
-    return redirect(url_for("index"))
-
-    return render_template("home.html")
+    return redirect(url_for('homepage'))
 
 
-@app.route("/logout")
-@login_required
+@app.route('/logout')
 def logout():
-    """Logout."""
-    logout_user()
+    """Handle logout of user."""
+
+    do_logout()
+    flash(f"You have been logged out.", "success")
     return redirect("/")
-
-
-# Adding SSL when running locally
-if __name__ == "__main__":
-    app.run(ssl_context="adhoc")

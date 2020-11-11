@@ -2,13 +2,12 @@
 
 import datetime
 
-from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
 
-class User(UserMixin, db.Model):
+class User(db.Model):
     """ Users in the app """
 
     __tablename__ = 'users'
@@ -18,13 +17,8 @@ class User(UserMixin, db.Model):
         primary_key=True,
     )
 
-    first_name = db.Column(
-        db.String(35),
-        nullable=False
-    )
-
-    last_name = db.Column(
-        db.String(35),
+    name = db.Column(
+        db.String(),
         nullable=False
     )
 
@@ -32,6 +26,24 @@ class User(UserMixin, db.Model):
         db.String(255),
         nullable=False
     )
+
+    slack_user_id = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    slack_team_id = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    slack_img_url = db.Column(
+        db.String(),
+        nullable=False
+    )
+
+    def get_firstname(self):
+        return name.partition(' ')[0]
 
 
 class Task(db.Model):
