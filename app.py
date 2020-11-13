@@ -74,8 +74,7 @@ def homepage():
 
     if g.user:
         # handle the homepage view for a logged in user
-
-        return render_template("home.html")
+        return render_template("home.html", user=g.user)
     else:
         return render_template('login.html')
 
@@ -139,20 +138,17 @@ def login_callback():
                     # If user is found, login
                     if user:
                         do_login(user)
-                        flash(f"Hello, {user.first_name}!", "success")
+                        flash(f"Hello, {user.name}!", "success")
 
                     else:
                         # Add the information from Slack into the db
-                        first_name = user_response['user']['name'].partition(' ')[
-                            0]
-                        last_name = user_response['user']['name'].partition(' ')[
-                            2]
+                        name = user_response['user']['name']
                         email = user_response['user']['email']
                         slack_team_id = user_response['team']['id']
                         slack_img_url = user_response['user']['image_512']
 
                         # Add user to the db
-                        user = User(first_name=first_name, last_name=last_name, email=email,
+                        user = User(name=name, email=email,
                                     slack_user_id=slack_user_id, slack_team_id=slack_team_id, slack_img_url=slack_img_url)
                         db.session.add(user)
                         db.session.commit()
@@ -161,7 +157,7 @@ def login_callback():
                         user = User.query.filter_by(
                             slack_user_id=slack_user_id).first()
                         do_login(user)
-                        flash(f"Hello, {user.first_name}!", "success")
+                        flash(f"Hello, {user.name}!", "success")
 
     return redirect(url_for('homepage'))
 
