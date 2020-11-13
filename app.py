@@ -90,7 +90,9 @@ def login():
     authorize_url_generator = AuthorizeUrlGenerator(
         client_id=os.environ.get("SLACK_CLIENT_ID", None),
         user_scopes=["identity.basic", "identity.email",
-                     "identity.team", "identity.avatar"]
+                     "identity.team", "identity.avatar"],
+        redirect_uri=os.environ.get(
+            'SLACK_REDIRECT_URI', 'https%3A%2F%2F127.0.0.1:5000%2Flogin%2Fcallback')
     )
 
     redirect_uri = authorize_url_generator.generate(state)
@@ -111,6 +113,7 @@ def login_callback():
             oauth_response = client.oauth_v2_access(
                 client_id=os.environ.get("SLACK_CLIENT_ID", None),
                 client_secret=os.environ.get("SLACK_CLIENT_SECRET", None),
+
                 code=request.args["code"]
             )
 
