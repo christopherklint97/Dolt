@@ -2,6 +2,29 @@ body {
     font-family: 'Poppins', sans-serif;
 }
 
-.jumbotron-center {
-    margin: 0 auto;
+#sidebar {
+    height: 100vh;
+    background-color: lightblue;
+    position: fixed; 
+}
+
+#app {
+    padding: 56px 0;
+}
+
+#main-dashboard {
+    left: 33.3vw;
+    padding: 2rem 10vw;
+}
+
+/* Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) { 
+    #main-dashboard {
+        left: 16.6vw;
+        padding: 2rem 20vw;
+    }
+ }
+
+.sidebar-headings {
+    padding-top: 10px;
 }

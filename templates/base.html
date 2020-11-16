@@ -14,13 +14,13 @@
         integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
 
     <!-- style.css -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="static/style.css">
     <title>{% block title %}{% endblock %}</title>
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-sm navbar-light bg-light">
-        <div class="container">
+    <nav class="navbar fixed-top navbar-expand-sm navbar-light bg-light">
+        <div class="container-fluid">
             <a class="navbar-brand" href="/">Dolt</a>
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -29,12 +29,6 @@
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="/">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Features</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Pricing</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav">
@@ -54,12 +48,15 @@
             </div>
         </div>
     </nav>
-    <div class="container-fluid">
+    <main class="container-fluid" id="app">
         {% for category, msg in get_flashed_messages(with_categories=True) %}
-        <div class="alert alert-{{category}}">{{ msg }}</div>
+        <div class="container">
+            <div class="alert alert-{{category}}">{{ msg }}</div>
+        </div>
+
         {% endfor %}
         {% block content %}{% endblock %}
-    </div>
+    </main>
 
     <!-- jQuery and Bootstrap Bundle (includes Popper) -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"

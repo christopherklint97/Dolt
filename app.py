@@ -35,6 +35,9 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "secret123")
 toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
+
+# Uncomment below if you need to delete the reset tables on the database
+# db.drop_all()
 db.create_all()
 
 ###############################################################################
@@ -55,6 +58,7 @@ def do_login(user):
     """Log in user."""
 
     session['CURR_USER_KEY'] = user.id
+    flash(f"Hello, {user.name}!", "success")
 
 
 def do_logout():
@@ -90,9 +94,7 @@ def login():
     authorize_url_generator = AuthorizeUrlGenerator(
         client_id=os.environ.get("SLACK_CLIENT_ID", None),
         user_scopes=["identity.basic", "identity.email",
-                     "identity.team", "identity.avatar"],
-        redirect_uri=os.environ.get(
-            'SLACK_REDIRECT_URI', 'https%3A%2F%2F127.0.0.1:5000%2Flogin%2Fcallback')
+                     "identity.team", "identity.avatar"]
     )
 
     redirect_uri = authorize_url_generator.generate(state)
@@ -113,7 +115,6 @@ def login_callback():
             oauth_response = client.oauth_v2_access(
                 client_id=os.environ.get("SLACK_CLIENT_ID", None),
                 client_secret=os.environ.get("SLACK_CLIENT_SECRET", None),
-
                 code=request.args["code"]
             )
 
@@ -141,7 +142,6 @@ def login_callback():
                     # If user is found, login
                     if user:
                         do_login(user)
-                        flash(f"Hello, {user.name}!", "success")
 
                     else:
                         # Add the information from Slack into the db
@@ -160,7 +160,6 @@ def login_callback():
                         user = User.query.filter_by(
                             slack_user_id=slack_user_id).first()
                         do_login(user)
-                        flash(f"Hello, {user.name}!", "success")
 
     return redirect(url_for('homepage'))
 

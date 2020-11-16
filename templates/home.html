@@ -3,9 +3,14 @@
 {% block title %} Dolt - Home {% endblock %}
 
 {% block content %}
-<div class="jumbotron jumbotron-fluid">
-    <div class="container text-center">
-        <h1 class="display-4">Login was successful</h1>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-4 col-md-2" id="sidebar">
+            {% include 'components/sidebar.html' %}
+        </div>
+        <div class="col-8 col-md-10" id="main-dashboard">
+            {% include 'components/new_task.html' %}
+        </div>
     </div>
 </div>
 

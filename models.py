@@ -61,7 +61,7 @@ class Task(db.Model):
         nullable=False
     )
 
-    body = db.Column(
+    description = db.Column(
         db.Text
     )
 
