@@ -1,5 +1,6 @@
 body {
     font-family: 'Poppins', sans-serif;
+    background-color: #F3F4F6;
 }
 
 #sidebar {
@@ -10,6 +11,7 @@ body {
 
 #app {
     padding: 56px 0;
+    height: 100vh;
 }
 
 #main-dashboard {
@@ -26,5 +28,40 @@ body {
  }
 
 .sidebar-headings {
-    padding-top: 10px;
+    padding-top: 1.5rem;
+    padding-left: 1rem;
 }
+
+#new-task-fields {
+    display: none;
+}
+
+#create-group {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.active {
+    background-color: lightyellow;
+}
+
+.avatar-img {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+}
+
+#create-group {
+    cursor: pointer;
+}
+
+/* Need to implement a better animation for the revealing of the fields */
+/* @keyframes sliding_fields {
+    from {
+        display: none;
+    }
+
+    to {
+        display: show;
+    }
+} */

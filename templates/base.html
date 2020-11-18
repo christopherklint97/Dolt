@@ -17,12 +17,12 @@
     <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 
     <!-- style.css -->
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>{% block title %}{% endblock %}</title>
 </head>
 
 <body>
-    <nav class="navbar fixed-top navbar-expand-sm navbar-light bg-light">
+    <nav class="navbar fixed-top navbar-expand-sm navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="/">Dolt</a>
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
@@ -37,14 +37,17 @@
                 <ul class="navbar-nav">
                     {% if user %}
                     <li class="nav-item">
-                        <a class="nav-link" href="#">{{ user.name }}</a>
+                        <img src="{{ user.slack_img_url }}" alt="" class="rounded-circle avatar-img">
+                    </li>
+                    <li class="nav-item">
+                        <p class="nav-link mb-0">{{ user.name }}</p>
                     </li>
                     <li class="nav-item">
                         <a class="btn btn-sm btn-outline-secondary mt-1" href="/logout">Logout</a>
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="btn btn-sm btn-outline-success mt-1" href="/login">Login with Slack</a>
+                        <a class="btn btn-sm btn-success mt-1" href="/login">Login with Slack</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -78,7 +81,7 @@
         crossorigin="anonymous"></script>
 
     <!-- app.js -->
-    <script src="static/app.js"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 
 </html>

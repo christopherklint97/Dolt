@@ -4,11 +4,24 @@
 
 {% block content %}
 <div class="container text-center my-5 py-5">
-    <h1 class="display-4">Dolt</h1>
-    <p class="lead">Helping multi-taskers do more with less.</p>
-    <a href="/login"><img alt="Sign in with Slack" height="40" width="172"
-            src="https://platform.slack-edge.com/img/sign_in_with_slack.png"
-            srcset="https://platform.slack-edge.com/img/sign_in_with_slack.png 1x, https://platform.slack-edge.com/img/sign_in_with_slack@2x.png 2x" /></a>
+    <div class="row d-flex justify-content-center">
+        <div class="col py-5">
+            <h1 class="display-4">Dolt</h1>
+            <p class="lead">The simple to-do with Slack integration.</p>
+            <a href="/login"><img alt="Sign in with Slack" height="40" width="172"
+                    src="https://platform.slack-edge.com/img/sign_in_with_slack.png"
+                    srcset="https://platform.slack-edge.com/img/sign_in_with_slack.png 1x, https://platform.slack-edge.com/img/sign_in_with_slack@2x.png 2x" /></a>
+        </div>
+        <div class="col-12 col-md-8 col-lg-6">
+            <figure class="figure">
+                <img src="{{ url_for('static', filename='imgs/todo_clipboard.jpg') }}"
+                    class="figure-img img-fluid rounded" alt="">
+                <figcaption class="figure-caption text-right"><a href="http://www.freepik.com">Designed by coolvector /
+                        Freepik</a></figcaption>
+            </figure>
+        </div>
+    </div>
+
 </div>
 
 {% endblock %}

@@ -1,37 +1,59 @@
 <p class="h6 sidebar-headings">Quick view</p>
 <ul class="nav flex-column">
-    <li class="nav-item">
-        <a href="#" class="nav-link">All tasks</a>
+    {% if view == 'all' %}
+    <li class="nav-item views active">
+        {% else %}
+    <li class="nav-item views">
+        {% endif %}
+        <a href="/tasks" class="nav-link">All tasks</a>
     </li>
-    <li class="nav-item">
-        <a href="#" class="nav-link">Important</a>
+    {% if view == 'important' %}
+    <li class="nav-item views active">
+        {% else %}
+    <li class="nav-item views">
+        {% endif %}
+        <a href="/tasks/important" class="nav-link">Important</a>
     </li>
 </ul>
 <p class="h6 sidebar-headings">Due</p>
 <ul class="nav flex-column">
-    <li class="nav-item">
-        <a href="#" class="nav-link">Today</a>
+    {% if view == 'today' %}
+    <li class="nav-item views active">
+        {% else %}
+    <li class="nav-item views">
+        {% endif %}
+        <a href="/tasks/today" class="nav-link">Today</a>
     </li>
-    <li class="nav-item">
-        <a href="#" class="nav-link">Tomorrow</a>
+    {% if view == 'tomorrow' %}
+    <li class="nav-item views active">
+        {% else %}
+    <li class="nav-item views">
+        {% endif %}
+        <a href="/tasks/tomorrow" class="nav-link">Tomorrow</a>
     </li>
-    <li class="nav-item">
-        <a href="#" class="nav-link">Later</a>
+    {% if view == 'later' %}
+    <li class="nav-item views active">
+        {% else %}
+    <li class="nav-item views">
+        {% endif %}
+        <a href="/tasks/later" class="nav-link">Later</a>
     </li>
 </ul>
 <p class="h6 sidebar-headings">Groups</p>
-{% if groups %}
+
 <ul class="nav flex-column">
-    <li class="nav-item">
-        <a href="#" class="nav-link">Today</a>
+    {% if groups %}
+    {% for group in groups %}
+    {% if view == group.id %}
+    <li class="nav-item groups active">
+        {% else %}
+    <li class="nav-item groups">
+        {% endif %}
+        <a href="/groups/{{ group.id }}" class="nav-link">{{ group.name }}</a>
     </li>
-    <li class="nav-item">
-        <a href="#" class="nav-link">Tomorrow</a>
-    </li>
-    <li class="nav-item">
-        <a href="#" class="nav-link">Later</a>
+    {% endfor %}
+    {% endif %}
+    <li class="nav-item groups">
+        <a class="nav-link" id="create-group" data-toggle="modal" data-target="#new-group-modal">Add group</a>
     </li>
 </ul>
-{% else %}
-<p>Create your first group <a href="#">here</a></p>
-{% endif %}

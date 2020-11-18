@@ -1,6 +1,6 @@
 """SQLAlchemy models for Dolt."""
 
-import datetime
+from datetime import date
 
 from flask_sqlalchemy import SQLAlchemy
 
@@ -66,11 +66,14 @@ class Task(db.Model):
     )
 
     due = db.Column(
-        db.DateTime,
+        db.Date,
+        default=date.today().isoformat()
     )
 
-    reminder = db.Column(
-        db.DateTime,
+    important = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
     )
 
     user_id = db.Column(
@@ -79,7 +82,13 @@ class Task(db.Model):
         nullable=False
     )
 
+    group_id = db.Column(
+        db.Integer,
+        db.ForeignKey('groups.id')
+    )
+
     user = db.relationship('User', backref='tasks')
+    group = db.relationship('Group', backref='tasks')
 
 
 class Group(db.Model):
@@ -94,36 +103,40 @@ class Group(db.Model):
 
     name = db.Column(
         db.String(20),
+        nullable=False,
+        unique=True
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='cascade'),
         nullable=False
     )
 
-    description = db.Column(
-        db.Text
-    )
+    user = db.relationship('User', backref='groups')
 
 
-class Group_Task(db.Model):
-    """ Assigning the tasks to each group """
+# class Group_Task(db.Model):
+#     """ Assigning the tasks to each group """
 
-    __tablename__ = 'groups_tasks'
+#     __tablename__ = 'groups_tasks'
 
-    id = db.Column(
-        db.Integer,
-        primary_key=True,
-    )
+#     id = db.Column(
+#         db.Integer,
+#         primary_key=True,
+#     )
 
-    group_id = db.Column(
-        db.Integer,
-        db.ForeignKey('groups.id')
-    )
+#     group_id = db.Column(
+#         db.Integer,
+#         db.ForeignKey('groups.id')
+#     )
 
-    task_id = db.Column(
-        db.Integer,
-        db.ForeignKey('tasks.id')
-    )
+#     task_id = db.Column(
+#         db.Integer,
+#         db.ForeignKey('tasks.id')
+#     )
 
-    group = db.relationship('Group', backref='groups_tasks')
-    task = db.relationship('Task', backref='groups_tasks')
+#     task = db.relationship('Task', backref='groups_tasks')
 
 
 def connect_db(app):

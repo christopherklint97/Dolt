@@ -1,14 +1,16 @@
 import requests
-from models import db, connect_db, User, Task, Group, Group_Task
+from models import db, connect_db, User, Task, Group
 import os
 
-from flask import Flask, render_template, request, flash, redirect, session, cli, url_for, abort, g
+from flask import Flask, render_template, request, flash, redirect, session, cli, url_for, g, jsonify
 from flask_cors import CORS
 from flask_debugtoolbar import DebugToolbarExtension
 
 from slack_sdk.oauth import AuthorizeUrlGenerator
 from slack_sdk.web import WebClient
 from slack_sdk.oauth.state_store import FileOAuthStateStore
+
+from datetime import date, timedelta
 
 
 app = Flask(__name__)
@@ -36,8 +38,6 @@ toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
 
-# Uncomment below if you need to delete the reset tables on the database
-# db.drop_all()
 db.create_all()
 
 ###############################################################################
@@ -78,7 +78,7 @@ def homepage():
 
     if g.user:
         # handle the homepage view for a logged in user
-        return render_template("home.html", user=g.user)
+        return redirect("/tasks")
     else:
         return render_template('login.html')
 
@@ -130,8 +130,6 @@ def login_callback():
                     api_method='users.identity',
                 )
 
-                print(user_response)
-
                 # Check if the request to Slack API was successful
                 if user_response['ok'] == True:
                     # Search in db for matching user with Slack ID
@@ -171,3 +169,123 @@ def logout():
     do_logout()
     flash(f"You have been logged out.", "success")
     return redirect("/")
+
+############################################################################################
+# API functions
+
+##################################################
+# API tasks
+
+
+@app.route('/api/tasks/new', methods=['POST'])
+def new_task():
+    """ Add new task for signed in user """
+    if not g.user:
+        return redirect("/")
+
+    # Handle AJAX request from client
+    title = request.json['title']
+    description = request.json['description']
+    date = request.json['date'] or Task.due.default.arg
+    if request.json['group'] == 'None':
+        task = Task(title=title, description=description,
+                    due=date, user_id=g.user.id)
+    else:
+        group = Group.query.filter_by(name=request.json['group']).first()
+        task = Task(title=title, description=description,
+                    due=date, group_id=group.id, user_id=g.user.id)
+
+    # Add the new task
+    db.session.add(task)
+    db.session.commit()
+
+    return redirect(request.path)
+
+
+@app.route('/tasks')
+def get_all_tasks():
+    """ Return all tasks for current user"""
+    if not g.user:
+        return redirect("/")
+
+    tasks = (Task
+             .query
+             .filter_by(user_id=g.user.id)
+             .all())
+
+    return render_template('home.html', tasks=tasks, view='all', user=g.user)
+
+
+@app.route('/tasks/important')
+def get_important_tasks():
+    """ Return important tasks for current user"""
+    if not g.user:
+        return redirect("/")
+
+    tasks = (Task
+             .query
+             .filter_by(user_id=g.user.id)
+             .filter_by(important=True)
+             .all())
+
+    return render_template('home.html', tasks=tasks, view='important', user=g.user)
+
+
+@app.route('/tasks/today')
+def get_today_tasks():
+    """ Return tasks due today for current user"""
+    if not g.user:
+        return redirect("/")
+
+    tasks = (Task
+             .query
+             .filter_by(user_id=g.user.id)
+             .filter(Task.due <= date.today().isoformat())
+             .all())
+
+    return render_template('home.html', tasks=tasks, view='today', user=g.user)
+
+
+@app.route('/tasks/tomorrow')
+def get_tomorrow_tasks():
+    """ Return tasks due tomorrow for current user"""
+    if not g.user:
+        return redirect("/")
+
+    tasks = (Task
+             .query
+             .filter_by(user_id=g.user.id)
+             .filter(Task.due - timedelta(days=1) == date.today().isoformat())
+             .all())
+
+    return render_template('home.html', tasks=tasks, view='tomorrow', user=g.user)
+
+
+@app.route('/tasks/later')
+def get_later_tasks():
+    """ Return tasks due later for current user"""
+    if not g.user:
+        return redirect("/")
+
+    tasks = (Task
+             .query
+             .filter_by(user_id=g.user.id)
+             .filter(Task.due - timedelta(days=2) >= date.today().isoformat())
+             .all())
+
+    return render_template('home.html', tasks=tasks, view='later', user=g.user)
+
+
+@app.route('/groups/<int:group_id>')
+def get_group_tasks(group_id):
+    """ Return tasks in a group for current user"""
+    if not g.user:
+        return redirect("/")
+
+    tasks = (Task
+             .query
+             .filter_by(user_id=g.user.id)
+             .filter_by(group_id=group_id)
+             .all())
+
+    return render_template('home.html', tasks=tasks, view=group_id, user=g.user)

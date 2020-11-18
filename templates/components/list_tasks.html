@@ -1,0 +1,11 @@
+{% if tasks %}
+{% for task in task %}
+<div class="card mb-2">
+    <div class="card-body px-3 py-2">
+        {{ task.title }}
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<p class="text-center mt-5 font-italic">Add a task to get started!</p>
+{% endif %}
