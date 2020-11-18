@@ -289,3 +289,23 @@ def get_group_tasks(group_id):
              .all())
 
     return render_template('home.html', tasks=tasks, view=group_id, user=g.user)
+
+##################################################
+# API groups
+
+
+@app.route('/api/groups/new', methods=['POST'])
+def new_group():
+    """ Add new group for signed in user """
+    if not g.user:
+        return redirect("/")
+
+    # Handle AJAX request from client
+    name = request.json['name']
+
+    # Add the new group
+    group = Group(name=name, user_id=g.user.id)
+    db.session.add(group)
+    db.session.commit()
+
+    return redirect(request.path)

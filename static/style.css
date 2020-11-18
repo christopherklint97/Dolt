@@ -55,13 +55,23 @@ body {
     cursor: pointer;
 }
 
-/* Need to implement a better animation for the revealing of the fields */
-/* @keyframes sliding_fields {
+.task {
+    cursor: pointer;
+}
+
+.task:hover {
+    left: 10px;
+    animation: slide 200ms ease;
+}
+
+
+/* Move tasks on hover */
+@keyframes slide {
     from {
-        display: none;
+        left: 0px;
     }
 
     to {
-        display: show;
+        left: 10px;
     }
-} */
+}

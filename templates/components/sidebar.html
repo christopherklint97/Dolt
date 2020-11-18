@@ -42,14 +42,25 @@
 <p class="h6 sidebar-headings">Groups</p>
 
 <ul class="nav flex-column">
-    {% if groups %}
-    {% for group in groups %}
+    {% if user.groups %}
+    {% for group in user.groups %}
     {% if view == group.id %}
     <li class="nav-item groups active">
         {% else %}
     <li class="nav-item groups">
         {% endif %}
-        <a href="/groups/{{ group.id }}" class="nav-link">{{ group.name }}</a>
+        <div class="row">
+            <div class="col-9 pr-0 mr-2">
+                <a href="/groups/{{ group.id }}" class="nav-link pr-0">{{ group.name }}</a>
+            </div>
+            <div class="col-2 px-0 text-right d-flex align-items-center">
+                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-three-dots" fill="currentColor"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd"
+                        d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
+                </svg>
+            </div>
+        </div>
     </li>
     {% endfor %}
     {% endif %}
