@@ -61,6 +61,41 @@ function showNewTaskFields() {
     newTaskFields.show();
 }
 
+/* Star task and send to API */
+async function starTask(e) {
+    e.preventDefault();
+
+    id = e.currentTarget.attributes[1].value;
+
+    await axios.post('/api/tasks/important', { id });
+
+    location.reload();
+}
+
+/* Sort tasks in API and refresh */
+async function sortTasks(e) {
+    e.preventDefault();
+
+    url = e.currentTarget.attributes[1].value;
+
+    await axios.get(url);
+
+    location.reload();
+}
+
+/* Complete tasks in API and refresh */
+async function completeTasks(e) {
+    e.preventDefault();
+
+    console.log(e)
+
+    id = e.currentTarget.attributes[1].value;
+
+    await axios.post('/api/tasks/completed', { id });
+
+    location.reload();
+}
+
 
 /* Collection of all the event listeners */
 function addEventListeners() {
@@ -70,6 +105,9 @@ function addEventListeners() {
     const cancelBtn = $('#cancel-btn');
     const addGroupModal = $('#new-group-modal');
     const addGroupForm = $('#add-group-form');
+    const star = $('[data-star]');
+    const sort = $('.sort');
+    const check = $('.check');
 
     // Submit event for new tasks
     newTaskForm.on('submit', addNewTask);
@@ -81,11 +119,21 @@ function addEventListeners() {
 
     // Implement add group modal on click
     addGroupModal.on('show.bs.modal', function () {
-        $('#new-group-name').trigger('focus');
+        $('.edit-group-name').trigger('focus');
     });
 
     // Submit event for new groups
     addGroupForm.on('submit', addNewGroup);
+
+    // Change importance for the task
+    star.on('click', starTask);
+
+    // Sort tasks based on backend API
+    sort.on('click', sortTasks);
+
+    // Complete tasks by checking them
+    check.on('click', completeTasks);
+
 }
 
 addEventListeners();

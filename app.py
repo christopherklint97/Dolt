@@ -32,7 +32,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "secret123")
 toolbar = DebugToolbarExtension(app)
 
@@ -58,6 +58,7 @@ def do_login(user):
     """Log in user."""
 
     session['CURR_USER_KEY'] = user.id
+    session['sort'] = 'recent'
     flash(f"Hello, {user.name}!", "success")
 
 
@@ -67,6 +68,7 @@ def do_logout():
     if 'CURR_USER_KEY' in session:
         del session['CURR_USER_KEY']
         del session['token']
+        del session['sort']
 
 
 ######################################################################################
@@ -199,7 +201,79 @@ def new_task():
     db.session.add(task)
     db.session.commit()
 
-    return redirect(request.path)
+    return redirect('/')
+
+
+@app.route('/api/tasks/<int:task_id>/edit', methods=['POST'])
+def edit_task_submit(task_id):
+    """ Submit updated task for signed in user """
+    if not g.user:
+        return redirect("/")
+
+    # Handle AJAX request from client
+    title = request.form['title']
+    description = request.form['description']
+    date = request.form['date']
+
+    # Add the new task
+    task = Task.query.get_or_404(task_id)
+    task.title = title
+    task.description = description
+    task.date = date
+    if request.form['group'] != 'None':
+        group = Group.query.filter_by(name=request.form['group']).first()
+        task.group_id = group.id
+    else:
+        task.group_id = None
+
+    db.session.add(task)
+    db.session.commit()
+
+    return redirect('/')
+
+
+@app.route('/api/tasks/important', methods=['POST'])
+def star_task():
+    """ Add star to task for signed in user """
+    if not g.user:
+        return redirect("/")
+
+    # Handle AJAX request from client
+    id = request.json['id']
+
+    # Update the task depending on important status
+    task = Task.query.get_or_404(id)
+    if task.important == False:
+        task.important = True
+    else:
+        task.important = False
+
+    db.session.add(task)
+    db.session.commit()
+
+    return redirect('/tasks/important')
+
+
+@app.route('/api/tasks/completed', methods=['POST'])
+def complete_task():
+    """ Complete task for signed in user """
+    if not g.user:
+        return redirect("/")
+
+    # Handle AJAX request from client
+    id = request.json['id']
+
+    # Update the task depending on important status
+    task = Task.query.get_or_404(id)
+    if task.completed == False:
+        task.completed = True
+    else:
+        task.completed = False
+
+    db.session.add(task)
+    db.session.commit()
+
+    return redirect('/tasks/completed')
 
 
 @app.route('/tasks')
@@ -211,9 +285,12 @@ def get_all_tasks():
     tasks = (Task
              .query
              .filter_by(user_id=g.user.id)
+             .filter(Task.completed != True)
              .all())
 
-    return render_template('home.html', tasks=tasks, view='all', user=g.user)
+    sort = session['sort']
+
+    return render_template('home.html', tasks=tasks, view='all', user=g.user, sort=sort)
 
 
 @app.route('/tasks/important')
@@ -228,7 +305,26 @@ def get_important_tasks():
              .filter_by(important=True)
              .all())
 
-    return render_template('home.html', tasks=tasks, view='important', user=g.user)
+    sort = session['sort']
+
+    return render_template('home.html', tasks=tasks, view='important', user=g.user, sort=sort)
+
+
+@app.route('/tasks/completed')
+def get_completed_tasks():
+    """ Return completed tasks for current user"""
+    if not g.user:
+        return redirect("/")
+
+    tasks = (Task
+             .query
+             .filter_by(user_id=g.user.id)
+             .filter_by(completed=True)
+             .all())
+
+    sort = session['sort']
+
+    return render_template('home.html', tasks=tasks, view='completed', user=g.user, sort=sort)
 
 
 @app.route('/tasks/today')
@@ -243,7 +339,9 @@ def get_today_tasks():
              .filter(Task.due <= date.today().isoformat())
              .all())
 
-    return render_template('home.html', tasks=tasks, view='today', user=g.user)
+    sort = session['sort']
+
+    return render_template('home.html', tasks=tasks, view='today', user=g.user, sort=sort)
 
 
 @app.route('/tasks/tomorrow')
@@ -258,7 +356,9 @@ def get_tomorrow_tasks():
              .filter(Task.due - timedelta(days=1) == date.today().isoformat())
              .all())
 
-    return render_template('home.html', tasks=tasks, view='tomorrow', user=g.user)
+    sort = session['sort']
+
+    return render_template('home.html', tasks=tasks, view='tomorrow', user=g.user, sort=sort)
 
 
 @app.route('/tasks/later')
@@ -273,7 +373,9 @@ def get_later_tasks():
              .filter(Task.due - timedelta(days=2) >= date.today().isoformat())
              .all())
 
-    return render_template('home.html', tasks=tasks, view='later', user=g.user)
+    sort = session['sort']
+
+    return render_template('home.html', tasks=tasks, view='later', user=g.user, sort=sort)
 
 
 @app.route('/groups/<int:group_id>')
@@ -288,7 +390,20 @@ def get_group_tasks(group_id):
              .filter_by(group_id=group_id)
              .all())
 
-    return render_template('home.html', tasks=tasks, view=group_id, user=g.user)
+    sort = session['sort']
+
+    return render_template('home.html', tasks=tasks, view=group_id, user=g.user, sort=sort)
+
+
+@app.route('/tasks/<int:task_id>')
+def edit_task(task_id):
+    """ Show task details for current user"""
+    if not g.user:
+        return redirect("/")
+
+    task = Task.query.get_or_404(task_id)
+
+    return render_template('edit_task.html', task=task, user=g.user)
 
 ##################################################
 # API groups
@@ -308,4 +423,47 @@ def new_group():
     db.session.add(group)
     db.session.commit()
 
-    return redirect(request.path)
+    return redirect('/')
+
+
+@app.route('/groups/<int:group_id>/edit')
+def edit_group(group_id):
+    """ Edit group for signed in user """
+    if not g.user:
+        return redirect("/")
+
+    group = Group.query.get_or_404(group_id)
+
+    return render_template('edit_group.html', group=group, user=g.user)
+
+
+@app.route('/api/groups/<int:group_id>/edit', methods=['POST'])
+def edit_group_submit(group_id):
+    """ Update edited group name for signed in user """
+    if not g.user:
+        return redirect("/")
+
+    # Handle AJAX request from client
+    name = request.form['group-name']
+
+    # Add the updated group
+    group = Group.query.get_or_404(group_id)
+    group.name = name
+    db.session.add(group)
+    db.session.commit()
+
+    return redirect(f'/groups/{group_id}')
+
+##################################################
+# API sorting
+
+
+@app.route('/api/sort/<sort>')
+def sort_tasks(sort):
+    """ Sort tasks by the sorting option """
+    if not g.user:
+        return redirect("/")
+
+    session['sort'] = sort
+
+    return redirect('/')

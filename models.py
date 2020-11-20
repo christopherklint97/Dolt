@@ -1,6 +1,6 @@
 """SQLAlchemy models for Dolt."""
 
-from datetime import date
+from datetime import date, datetime
 
 from flask_sqlalchemy import SQLAlchemy
 
@@ -76,6 +76,18 @@ class Task(db.Model):
         nullable=False
     )
 
+    completed = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.now(),
+        nullable=False
+    )
+
     user_id = db.Column(
         db.Integer,
         db.ForeignKey('users.id', ondelete='cascade'),
@@ -102,9 +114,8 @@ class Group(db.Model):
     )
 
     name = db.Column(
-        db.String(20),
-        nullable=False,
-        unique=True
+        db.String(50),
+        nullable=False
     )
 
     user_id = db.Column(
@@ -114,29 +125,6 @@ class Group(db.Model):
     )
 
     user = db.relationship('User', backref='groups')
-
-
-# class Group_Task(db.Model):
-#     """ Assigning the tasks to each group """
-
-#     __tablename__ = 'groups_tasks'
-
-#     id = db.Column(
-#         db.Integer,
-#         primary_key=True,
-#     )
-
-#     group_id = db.Column(
-#         db.Integer,
-#         db.ForeignKey('groups.id')
-#     )
-
-#     task_id = db.Column(
-#         db.Integer,
-#         db.ForeignKey('tasks.id')
-#     )
-
-#     task = db.relationship('Task', backref='groups_tasks')
 
 
 def connect_db(app):
