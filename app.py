@@ -405,6 +405,21 @@ def edit_task(task_id):
 
     return render_template('edit_task.html', task=task, user=g.user)
 
+
+@app.route('/api/tasks/<int:task_id>/delete')
+def delete_task(task_id):
+    """ Delete task for signed in user """
+    if not g.user:
+        return redirect("/")
+
+    task = Task.query.get_or_404(task_id)
+
+    db.session.delete(task)
+    db.session.commit()
+
+    return redirect('/')
+
+
 ##################################################
 # API groups
 
@@ -453,6 +468,20 @@ def edit_group_submit(group_id):
     db.session.commit()
 
     return redirect(f'/groups/{group_id}')
+
+
+@app.route('/api/groups/<int:group_id>/delete')
+def delete_group(group_id):
+    """ Delete group for signed in user """
+    if not g.user:
+        return redirect("/")
+
+    group = Group.query.get_or_404(group_id)
+
+    db.session.delete(group)
+    db.session.commit()
+
+    return redirect('/')
 
 ##################################################
 # API sorting

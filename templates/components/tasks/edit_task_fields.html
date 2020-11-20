@@ -57,6 +57,7 @@
         <div class="col text-right">
             <button type="button" class="btn btn-outline-secondary btn-sm"
                 onclick="javascript:history.go(-1)">Cancel</button>
+            <a href="/api/tasks/{{ task.id }}/delete" class="btn btn-danger btn-sm">Delete</a>
             <button type="submit" class="btn btn-success btn-sm">Save task</button>
         </div>
     </div>
