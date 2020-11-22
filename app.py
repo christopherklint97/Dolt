@@ -2,13 +2,14 @@ import requests
 from models import db, connect_db, User, Task, Group
 import os
 
-from flask import Flask, render_template, request, flash, redirect, session, cli, url_for, g, jsonify
+from flask import Flask, render_template, request, flash, redirect, session, cli, url_for, g, jsonify, Response
 from flask_cors import CORS
 from flask_debugtoolbar import DebugToolbarExtension
 
 from slack_sdk.oauth import AuthorizeUrlGenerator
 from slack_sdk.web import WebClient
 from slack_sdk.oauth.state_store import FileOAuthStateStore
+from slack_sdk.signature import SignatureVerifier
 
 from datetime import date, timedelta
 
@@ -496,3 +497,80 @@ def sort_tasks(sort):
     session['sort'] = sort
 
     return redirect('/')
+
+#####################################################################################################
+# Slack slash commands
+
+
+def confirm_receipt():
+    return ('', 200)
+
+
+@app.route('/slack/tasks', methods=['POST'])
+def slack_get_tasks():
+    """ Get all tasks for the slack user """
+
+    # Confirm receipt to Slack so that no error is shown to user
+    confirm_receipt()
+
+    # Verify that the request actually came from Slack through its signature
+    signature = SignatureVerifier(os.environ.get('SLACK_SIGNING_SECRET'))
+    if not signature.is_valid_request(request.get_data(as_text=True), request.headers):
+        return jsonify(
+            response_type='ephemeral',
+            text="Sorry, slash commando, that didn't work. Please try again.",
+        )
+
+    # Given the slack user id, extract the user and needed data
+    slack_user_id = request.form.get('user_id')
+    user = User.query.filter_by(slack_user_id=slack_user_id).first()
+    tasks = (Task
+             .query
+             .filter_by(user_id=user.id)
+             .filter(Task.completed != True)
+             .all())
+
+    # Loop through the tasks and add them to a list
+    list_tasks = []
+    for task in tasks:
+        dict_task = {
+            "type": "plain_text",
+            "text": f"{task.title}",
+            "emoji": True
+        }
+        list_tasks.append(dict_task)
+
+    # Assemble the blocks used for the message back to slack
+    if list_tasks:
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Here are all of your open tasks",
+                    "emoji": True
+                }
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "section",
+                "fields": list_tasks
+            }
+        ]
+    else:
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "You currently have no open tasks. Nice work! :thumbsup:"
+                }
+            }
+        ]
+
+    return jsonify(
+        response_type='in_channel',
+        blocks=blocks,
+    )
