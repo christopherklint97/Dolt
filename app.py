@@ -304,6 +304,7 @@ def get_important_tasks():
              .query
              .filter_by(user_id=g.user.id)
              .filter_by(important=True)
+             .filter(Task.completed != True)
              .all())
 
     sort = session['sort']
@@ -338,6 +339,7 @@ def get_today_tasks():
              .query
              .filter_by(user_id=g.user.id)
              .filter(Task.due <= date.today().isoformat())
+             .filter(Task.completed != True)
              .all())
 
     sort = session['sort']
@@ -355,6 +357,7 @@ def get_tomorrow_tasks():
              .query
              .filter_by(user_id=g.user.id)
              .filter(Task.due - timedelta(days=1) == date.today().isoformat())
+             .filter(Task.completed != True)
              .all())
 
     sort = session['sort']
@@ -372,6 +375,7 @@ def get_later_tasks():
              .query
              .filter_by(user_id=g.user.id)
              .filter(Task.due - timedelta(days=2) >= date.today().isoformat())
+             .filter(Task.completed != True)
              .all())
 
     sort = session['sort']
@@ -389,6 +393,7 @@ def get_group_tasks(group_id):
              .query
              .filter_by(user_id=g.user.id)
              .filter_by(group_id=group_id)
+             .filter(Task.completed != True)
              .all())
 
     sort = session['sort']
@@ -523,49 +528,260 @@ def slack_get_tasks():
 
     # Given the slack user id, extract the user and needed data
     slack_user_id = request.form.get('user_id')
+    text = request.form.get('text')
     user = User.query.filter_by(slack_user_id=slack_user_id).first()
-    tasks = (Task
-             .query
-             .filter_by(user_id=user.id)
-             .filter(Task.completed != True)
-             .all())
 
-    # Loop through the tasks and add them to a list
-    list_tasks = []
-    for task in tasks:
-        dict_task = {
-            "type": "plain_text",
-            "text": f"{task.title}",
-            "emoji": True
-        }
-        list_tasks.append(dict_task)
+    # Declare variables to be used for filtering the tasks based on the slack message
+    due_tasks = None
+    group_tasks = None
+    important_tasks = None
 
-    # Assemble the blocks used for the message back to slack
-    if list_tasks:
-        blocks = [
-            {
-                "type": "header",
-                "text": {
+    # Find all tasks due according to parameter
+    if text.find('@') != -1:
+        due = text.partition('@')[2].partition(' ')[0]
+
+        if due.lower() == 'today':
+            due_tasks = (Task
+                         .query
+                         .filter_by(user_id=user.id)
+                         .filter(Task.due <= date.today().isoformat())
+                         .filter(Task.completed != True)
+                         .all())
+
+        if due.lower() == 'tomorrow':
+            due_tasks = (Task
+                         .query
+                         .filter_by(user_id=user.id)
+                         .filter(Task.due - timedelta(days=1) == date.today().isoformat())
+                         .filter(Task.completed != True)
+                         .all())
+
+        if due.lower() == 'later':
+            due_tasks = (Task
+                         .query
+                         .filter_by(user_id=user.id)
+                         .filter(Task.due - timedelta(days=2) >= date.today().isoformat())
+                         .filter(Task.completed != True)
+                         .all())
+
+    # Find all tasks in group according to parameter
+    if text.find('"') != -1:
+        group = text.partition('"')[2].partition('"')[0]
+
+        group_tasks = (Task
+                       .query
+                       .filter_by(user_id=user.id)
+                       .filter(Task.group == group)
+                       .filter(Task.completed != True)
+                       .all())
+
+    # Find all important tasks according to parameter
+    if text.find('*') != -1:
+
+        important_tasks = (Task
+                           .query
+                           .filter_by(user_id=user.id)
+                           .filter(Task.important == True)
+                           .filter(Task.completed != True)
+                           .all())
+
+    # Fetch final tasks based on parameters
+    tasks = set()
+    if due_tasks != None:
+        for task in due_tasks:
+            tasks.add(task)
+
+    if group_tasks != None:
+        for task in group_tasks:
+            tasks.add(task)
+
+    if important_tasks != None:
+        for task in important_tasks:
+            tasks.add(task)
+
+    if tasks == {None}:
+        tasks = (Task
+                 .query
+                 .filter_by(user_id=user.id)
+                 .filter(Task.completed != True)
+                 .all())
+
+    # Construct the blocks for the slack message
+    blocks = [
+        {
+            "type": "header",
+            "text": {
                     "type": "plain_text",
                     "text": "Here are all of your open tasks",
                     "emoji": True
-                }
-            },
-            {
-                "type": "divider"
-            },
-            {
-                "type": "section",
-                "fields": list_tasks
             }
-        ]
-    else:
+        },
+        {
+            "type": "divider"
+        }
+    ]
+
+    # Loop through the tasks and add them to the blocks
+    for task in tasks:
+        dict_task = {
+            "type": "section",
+            "text": {
+                "type": "plain_text",
+                "text": f"{task.title}",
+                "emoji": True
+            }
+        }
+        blocks.append(dict_task)
+
+    # If there are no tasks, send a standard message
+    if len(blocks) == 2:
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
                     "text": "You currently have no open tasks. Nice work! :thumbsup:"
+                }
+            }
+        ]
+
+    return jsonify(
+        response_type='in_channel',
+        blocks=blocks,
+    )
+
+
+@app.route('/slack/tasks/new', methods=['POST'])
+def slack_add_task():
+    """ Add new task for the slack user """
+
+    # Confirm receipt to Slack so that no error is shown to user
+    confirm_receipt()
+
+    # Verify that the request actually came from Slack through its signature
+    signature = SignatureVerifier(os.environ.get('SLACK_SIGNING_SECRET'))
+    if not signature.is_valid_request(request.get_data(as_text=True), request.headers):
+        return jsonify(
+            response_type='ephemeral',
+            text="Sorry, slash commando, that didn't work. Please try again.",
+        )
+
+    # Given the slack user id, extract the user and needed data
+    slack_user_id = request.form.get('user_id')
+    text = request.form.get('text')
+    user = User.query.filter_by(slack_user_id=slack_user_id).first()
+
+    # Fetch all groups for slack user
+    groups = (Group
+              .query
+              .filter_by(user_id=user.id)
+              .all())
+
+    # Construct the blocks for the slack message
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                    "type": "plain_text",
+                    "text": "Here are all of your groups",
+                    "emoji": True
+            }
+        },
+        {
+            "type": "divider"
+        }
+    ]
+
+    # Loop through the tasks and add them to the blocks
+    for group in groups:
+        dict_group = {
+            "type": "section",
+            "text": {
+                "type": "plain_text",
+                "text": f"{group.name}",
+                "emoji": True
+            }
+        }
+        blocks.append(dict_group)
+
+    # If there are no groups, send a standard message
+    if len(blocks) == 2:
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "You currently have no groups. Feel free to create one with /dolt.group :pray:"
+                }
+            }
+        ]
+
+    return jsonify(
+        response_type='in_channel',
+        blocks=blocks,
+    )
+
+
+@app.route('/slack/groups', methods=['POST'])
+def slack_get_groups():
+    """ Get all groups for the slack user """
+
+    # Confirm receipt to Slack so that no error is shown to user
+    confirm_receipt()
+
+    # Verify that the request actually came from Slack through its signature
+    signature = SignatureVerifier(os.environ.get('SLACK_SIGNING_SECRET'))
+    if not signature.is_valid_request(request.get_data(as_text=True), request.headers):
+        return jsonify(
+            response_type='ephemeral',
+            text="Sorry, slash commando, that didn't work. Please try again.",
+        )
+
+    # Given the slack user id, extract the user and needed data
+    slack_user_id = request.form.get('user_id')
+    user = User.query.filter_by(slack_user_id=slack_user_id).first()
+
+    # Fetch all groups for slack user
+    groups = (Group
+              .query
+              .filter_by(user_id=user.id)
+              .all())
+
+    # Construct the blocks for the slack message
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                    "type": "plain_text",
+                    "text": "Here are all of your groups",
+                    "emoji": True
+            }
+        },
+        {
+            "type": "divider"
+        }
+    ]
+
+    # Loop through the tasks and add them to the blocks
+    for group in groups:
+        dict_group = {
+            "type": "section",
+            "text": {
+                "type": "plain_text",
+                "text": f"{group.name}",
+                "emoji": True
+            }
+        }
+        blocks.append(dict_group)
+
+    # If there are no groups, send a standard message
+    if len(blocks) == 2:
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "You currently have no groups. Feel free to create one with /dolt.group :pray:"
                 }
             }
         ]
