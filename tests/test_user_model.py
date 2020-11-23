@@ -2,7 +2,7 @@
 
 # run these tests like:
 #
-#    python -m unittest test_user_model.py
+#    python -m unittest tests/test_user_model.py
 
 
 from app import app

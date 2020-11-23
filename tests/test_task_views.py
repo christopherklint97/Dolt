@@ -2,10 +2,10 @@
 
 # run these tests like:
 #
-#    FLASK_ENV=production python -m unittest test_message_views.py
+#    FLASK_ENV=production python -m unittest tests/test_task_views.py
 
 
-from app import app, CURR_USER_KEY
+from app import app
 import os
 from unittest import TestCase
 
@@ -48,7 +48,7 @@ class TaskViewTestCase(TestCase):
         self.testuser_id = 721
         self.testuser.id = self.testuser_id
 
-        db.session.add(testuser)
+        db.session.add(self.testuser)
         db.session.commit()
 
     def test_add_task(self):
@@ -59,12 +59,12 @@ class TaskViewTestCase(TestCase):
 
         with self.client as c:
             with c.session_transaction() as sess:
-                sess[CURR_USER_KEY] = self.testuser.id
+                sess['CURR_USER_KEY'] = self.testuser.id
 
             # Now, that session setting is saved, so we can have
             # the rest of our test
 
-            resp = c.post("api/tasks/new", data={"title": "Clean the garage"})
+            resp = c.post("api/tasks/new", json={"title": "Clean the garage"})
 
             # Make sure it redirects
             self.assertEqual(resp.status_code, 302)
@@ -79,19 +79,19 @@ class TaskViewTestCase(TestCase):
             resp = c.post("api/tasks/new",
                           data={"title": "Clean the garage"}, follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
-            self.assertIn("Access unauthorized", str(resp.data))
+            self.assertIn("Sign in with Slack", str(resp.data))
 
     def test_add_invalid_user(self):
         """ Are we redirected if user is invalid? """
 
         with self.client as c:
             with c.session_transaction() as sess:
-                sess[CURR_USER_KEY] = 99222224  # user does not exist
+                sess['CURR_USER_KEY'] = 99222224  # user does not exist
 
             resp = c.post("api/tasks/new",
                           data={"title": "Clean the garage"}, follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
-            self.assertIn("Access unauthorized", str(resp.data))
+            self.assertIn("Sign in with Slack", str(resp.data))
 
     def test_task_show(self):
         """ Does the task show? """
@@ -106,20 +106,20 @@ class TaskViewTestCase(TestCase):
 
         with self.client as c:
             with c.session_transaction() as sess:
-                sess[CURR_USER_KEY] = self.testuser.id
+                sess['CURR_USER_KEY'] = self.testuser.id
 
             t = Task.query.get(12345)
 
             resp = c.get(f'/tasks/{t.id}')
 
             self.assertEqual(resp.status_code, 200)
-            self.assertIn(t.text, str(resp.data))
+            self.assertIn(t.title, str(resp.data))
 
     def test_invalid_task_show(self):
         """ Do invalid tasks return errors? """
         with self.client as c:
             with c.session_transaction() as sess:
-                sess[CURR_USER_KEY] = self.testuser.id
+                sess['CURR_USER_KEY'] = self.testuser.id
 
             resp = c.get('/tasks/99999999')
 
@@ -137,40 +137,13 @@ class TaskViewTestCase(TestCase):
 
         with self.client as c:
             with c.session_transaction() as sess:
-                sess[CURR_USER_KEY] = self.testuser.id
+                sess['CURR_USER_KEY'] = self.testuser.id
 
             resp = c.get("api/tasks/12345/delete", follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
 
             t = Task.query.get(12345)
-            self.assertIsNone(m)
-
-    def test_unauthorized_task_delete(self):
-        """ Can an unauthorized user delete a task? """
-        # A second user that will try to delete the task
-        u = User(name='Bill', email="bill@gmail.com",
-                 slack_user_id="82", slack_team_id='65gbt', slack_img_url='testimg3.com')
-        u.id = 76543
-
-        # Message is owned by testuser
-        t = Task(
-            id=12345,
-            title="a test task",
-            user_id=self.testuser_id
-        )
-        db.session.add_all([u, t])
-        db.session.commit()
-
-        with self.client as c:
-            with c.session_transaction() as sess:
-                sess[CURR_USER_KEY] = 76543
-
-            resp = c.get("api/tasks/12345/delete", follow_redirects=True)
-            self.assertEqual(resp.status_code, 200)
-            self.assertIn("Access unauthorized", str(resp.data))
-
-            t = Task.query.get(12345)
-            self.assertIsNotNone(m)
+            self.assertIsNone(t)
 
     def test_message_delete_no_authentication(self):
         """ Can any task be deleted without authentication? """
@@ -185,7 +158,7 @@ class TaskViewTestCase(TestCase):
         with self.client as c:
             resp = c.get("api/tasks/12345/delete", follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
-            self.assertIn("Access unauthorized", str(resp.data))
+            self.assertIn("Sign in with Slack", str(resp.data))
 
             t = Task.query.get(12345)
-            self.assertIsNotNone(m)
+            self.assertIsNotNone(t)

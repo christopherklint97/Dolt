@@ -2,7 +2,7 @@
 
 # run these tests like:
 #
-#    python -m unittest test_task_model.py
+#    python -m unittest tests/test_group_model.py
 
 
 from app import app
@@ -65,7 +65,7 @@ class TaskModelTestCase(TestCase):
             user_id=self.uid
         )
 
-        db.session.add(m)
+        db.session.add(g)
         db.session.commit()
 
         # User should have 1 group

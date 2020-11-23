@@ -185,14 +185,14 @@ def new_task():
         return redirect("/")
 
     # Handle AJAX request from client
-    title = request.json['title']
-    description = request.json['description']
-    date = request.json['date'] or Task.due.default.arg
-    if request.json['group'] == 'None':
+    title = request.json.get('title')
+    description = request.json.get('description')
+    date = request.json.get('date') or Task.due.default.arg
+    if not request.json.get('group'):
         task = Task(title=title, description=description,
                     due=date, user_id=g.user.id)
     else:
-        group = Group.query.filter_by(name=request.json['group']).first()
+        group = Group.query.filter_by(name=request.json.get('group')).first()
         task = Task(title=title, description=description,
                     due=date, group_id=group.id, user_id=g.user.id)
 
@@ -210,9 +210,9 @@ def edit_task_submit(task_id):
         return redirect("/")
 
     # Handle AJAX request from client
-    title = request.form['title']
-    description = request.form['description']
-    date = request.form['date']
+    title = request.form.get('title')
+    description = request.form.get('description')
+    date = request.form.get('date')
 
     # Add the new task
     task = Task.query.get_or_404(task_id)
@@ -238,7 +238,7 @@ def star_task():
         return redirect("/")
 
     # Handle AJAX request from client
-    id = request.json['id']
+    id = request.json.get('id')
 
     # Update the task depending on important status
     task = Task.query.get_or_404(id)
@@ -260,7 +260,7 @@ def complete_task():
         return redirect("/")
 
     # Handle AJAX request from client
-    id = request.json['id']
+    id = request.json.get('id')
 
     # Update the task depending on important status
     task = Task.query.get_or_404(id)
@@ -287,7 +287,7 @@ def get_all_tasks():
              .filter(Task.completed != True)
              .all())
 
-    sort = session['sort']
+    sort = session.get('sort') or 'recent'
 
     return render_template('home.html', tasks=tasks, view='all', user=g.user, sort=sort)
 
@@ -305,7 +305,7 @@ def get_important_tasks():
              .filter(Task.completed != True)
              .all())
 
-    sort = session['sort']
+    sort = session.get('sort') or 'recent'
 
     return render_template('home.html', tasks=tasks, view='important', user=g.user, sort=sort)
 
@@ -322,7 +322,7 @@ def get_completed_tasks():
              .filter_by(completed=True)
              .all())
 
-    sort = session['sort']
+    sort = session.get('sort') or 'recent'
 
     return render_template('home.html', tasks=tasks, view='completed', user=g.user, sort=sort)
 
@@ -340,7 +340,7 @@ def get_today_tasks():
              .filter(Task.completed != True)
              .all())
 
-    sort = session['sort']
+    sort = session.get('sort') or 'recent'
 
     return render_template('home.html', tasks=tasks, view='today', user=g.user, sort=sort)
 
@@ -358,7 +358,7 @@ def get_tomorrow_tasks():
              .filter(Task.completed != True)
              .all())
 
-    sort = session['sort']
+    sort = session.get('sort') or 'recent'
 
     return render_template('home.html', tasks=tasks, view='tomorrow', user=g.user, sort=sort)
 
@@ -376,7 +376,7 @@ def get_later_tasks():
              .filter(Task.completed != True)
              .all())
 
-    sort = session['sort']
+    sort = session.get('sort') or 'recent'
 
     return render_template('home.html', tasks=tasks, view='later', user=g.user, sort=sort)
 
@@ -394,7 +394,7 @@ def get_group_tasks(group_id):
              .filter(Task.completed != True)
              .all())
 
-    sort = session['sort']
+    sort = session.get('sort') or 'recent'
 
     return render_template('home.html', tasks=tasks, view=group_id, user=g.user, sort=sort)
 
@@ -435,7 +435,7 @@ def new_group():
         return redirect("/")
 
     # Handle AJAX request from client
-    name = request.json['name']
+    name = request.json.get('name')
 
     # Add the new group
     group = Group(name=name, user_id=g.user.id)
@@ -463,7 +463,7 @@ def edit_group_submit(group_id):
         return redirect("/")
 
     # Handle AJAX request from client
-    name = request.form['group-name']
+    name = request.form.get('group-name')
 
     # Add the updated group
     group = Group.query.get_or_404(group_id)
