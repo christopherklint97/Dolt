@@ -68,7 +68,6 @@ def do_logout():
 
     if 'CURR_USER_KEY' in session:
         del session['CURR_USER_KEY']
-        del session['token']
         del session['sort']
 
 
@@ -123,9 +122,8 @@ def login_callback():
 
             # Check if the request to Slack API was successful
             if oauth_response['ok'] == True:
-                # Saving access token for the authenticated user in the session
+                # Saving access token for the authenticated user as a variable
                 token = oauth_response['authed_user']['access_token']
-                session['token'] = token
 
                 # Requesting the Slack identity of the user
                 client = WebClient(token=token)
@@ -513,7 +511,7 @@ def confirm_receipt():
 
 @app.route('/slack/tasks', methods=['POST'])
 def slack_get_tasks():
-    """ Get all tasks for the slack user """
+    """ Get all open tasks for the slack user """
 
     # Confirm receipt to Slack so that no error is shown to user
     confirm_receipt()
@@ -537,8 +535,8 @@ def slack_get_tasks():
     important_tasks = None
 
     # Find all tasks due according to parameter
-    if text.find('@') != -1:
-        due = text.partition('@')[2].partition(' ')[0]
+    if text.find('$') != -1:
+        due = text.partition('$')[2].partition(' ')[0]
 
         if due.lower() == 'today':
             due_tasks = (Task
@@ -565,8 +563,8 @@ def slack_get_tasks():
                          .all())
 
     # Find all tasks in group according to parameter
-    if text.find('"') != -1:
-        group = text.partition('"')[2].partition('"')[0]
+    if text.find('(') != -1:
+        group = text.partition('(')[2].partition(')')[0]
 
         group_tasks = (Task
                        .query
@@ -599,7 +597,7 @@ def slack_get_tasks():
         for task in important_tasks:
             tasks.add(task)
 
-    if tasks == {None}:
+    if len(tasks) == 0:
         tasks = (Task
                  .query
                  .filter_by(user_id=user.id)
@@ -671,47 +669,67 @@ def slack_add_task():
     text = request.form.get('text')
     user = User.query.filter_by(slack_user_id=slack_user_id).first()
 
-    # Fetch all groups for slack user
-    groups = (Group
-              .query
-              .filter_by(user_id=user.id)
-              .all())
+    try:
+        # Declare optional variables to be used for the new task based on the slack message
+        description = None
+        due = Task.due.default.arg
+        important = Task.important.default.arg
+        group_name = None
 
-    # Construct the blocks for the slack message
-    blocks = [
-        {
-            "type": "header",
-            "text": {
-                    "type": "plain_text",
-                    "text": "Here are all of your groups",
-                    "emoji": True
-            }
-        },
-        {
-            "type": "divider"
-        }
-    ]
+        # Parse the title from the slack text
+        title = text.partition('"')[2].partition('"')[0]
 
-    # Loop through the tasks and add them to the blocks
-    for group in groups:
-        dict_group = {
-            "type": "section",
-            "text": {
-                "type": "plain_text",
-                "text": f"{group.name}",
-                "emoji": True
-            }
-        }
-        blocks.append(dict_group)
+        # Parse the description from the slack text
+        if text.find('<') != -1:
+            description = text.partition('<')[2].partition('>')[0]
 
-    # If there are no groups, send a standard message
-    if len(blocks) == 2:
+        # Parse the due date from the slack text
+        if text.find('$') != -1:
+            due = text.partition('$')[2].partition(' ')[0]
+
+        # Parse with the task is important from the slack text
+        if text.find('*') != -1:
+            important = True
+
+        # Parse the group from the slack text
+        if text.find('(') != -1:
+            group_name = text.partition('(')[2].partition(')')[0]
+
+        # Add the task depending on the group
+        if group_name == None:
+            task = Task(title=title, description=description,
+                        due=due, important=important, user_id=user.id)
+        else:
+            group = Group.query.filter_by(name=group_name).first()
+            task = Task(title=title, description=description,
+                        due=due, group_id=group.id, user_id=user.id)
+
+        # Add the new task
+        db.session.add(task)
+        db.session.commit()
+
+        # Success blocks
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "You currently have no groups. Feel free to create one with /dolt.group :pray:"
+                    "text": "Success! Your new task is added, now get to work :muscle:"
+                }
+            }
+        ]
+
+    except Exception as e:
+
+        print(e)
+
+        # Failed blocks
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "Sorry, something went wrong :worried: Please check your parameters and try again!"
                 }
             }
         ]
@@ -782,6 +800,64 @@ def slack_get_groups():
                 "text": {
                     "type": "mrkdwn",
                     "text": "You currently have no groups. Feel free to create one with /dolt.group :pray:"
+                }
+            }
+        ]
+
+    return jsonify(
+        response_type='in_channel',
+        blocks=blocks,
+    )
+
+
+@app.route('/slack/groups/new', methods=['POST'])
+def slack_add_group():
+    """ Add new group for the slack user """
+
+    # Confirm receipt to Slack so that no error is shown to user
+    confirm_receipt()
+
+    # Verify that the request actually came from Slack through its signature
+    signature = SignatureVerifier(os.environ.get('SLACK_SIGNING_SECRET'))
+    if not signature.is_valid_request(request.get_data(as_text=True), request.headers):
+        return jsonify(
+            response_type='ephemeral',
+            text="Sorry, slash commando, that didn't work. Please try again.",
+        )
+
+    # Given the slack user id, extract the user and needed data
+    slack_user_id = request.form.get('user_id')
+    text = request.form.get('text')
+    user = User.query.filter_by(slack_user_id=slack_user_id).first()
+
+    try:
+        # Add the new group
+        group = Group(name=text, user_id=user.id)
+        db.session.add(group)
+        db.session.commit()
+
+        # Success blocks
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "Success! Your new group is added. Start adding tasks to it with /dolt.task :pencil:"
+                }
+            }
+        ]
+
+    except Exception as e:
+
+        print(e)
+
+        # Failed blocks
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "Sorry, something went wrong :worried: Please check your parameters and try again!"
                 }
             }
         ]

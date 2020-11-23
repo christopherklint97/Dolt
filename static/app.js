@@ -5,6 +5,11 @@ $(function () {
     });
 });
 
+/* Enable tooltips everywhere */
+$(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+})
+
 /* Handle submission of the new task form */
 async function addNewTask(e) {
     e.preventDefault();
