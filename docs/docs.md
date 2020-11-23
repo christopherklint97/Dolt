@@ -1,4 +1,6 @@
 # What is Dolt?
+Looking for the slash commands reference? They are found [here](#slash).
+
 Dolt is a simple task manager that integrates with Slack through Oauth and slash commands.
 
 ## How to use Dolt?
@@ -13,7 +15,7 @@ When creating tasks, all you really need is a title to save a task. However, if 
 - Group
 - Importance
 
-Try out the [web app](dolt.christopherklint.com) to get familiar with the different task options!
+Try out the [web app](https://dolt.christopherklint.com) to get familiar with the different task options!
 
 ### <a name="groups"></a>Groups
 Groups work as tags or collections to categorize tasks. They are very easy to use and only require a name when creating them.
@@ -31,7 +33,7 @@ To get the most out of Dolt, you can access your tasks and groups from within Sl
 
 *Note: the Dolt app needs to be installed on your workspace in order for the commands to work!!*
 
-## Slack slash commands
+## <a name="slash"></a>Reference: slash commands
 ### View all open tasks
 ```code
 /dolt 
@@ -62,6 +64,7 @@ Command for adding a new task. The only required parameter is the *title* parame
     - Add a group to the task. Replace *group_name* with the name of the group.
 - \*
     - Character for marking the task as important.
+
 Example:
 ```code
 /dolt.task "Order pizza" <Do it before the fellas arrive> $20-11-23 (The Boys) *
