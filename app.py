@@ -2,7 +2,7 @@ import requests
 from models import db, connect_db, User, Task, Group
 import os
 
-from flask import Flask, render_template, request, flash, redirect, session, cli, url_for, g, jsonify, Response
+from flask import Flask, render_template, request, flash, redirect, session, cli, url_for, g, jsonify
 from flask_cors import CORS
 from flask_debugtoolbar import DebugToolbarExtension
 
@@ -111,13 +111,13 @@ def login_callback():
     # Retrieve the auth code from the request params
     if "code" in request.args:
         # Verify the state parameter
-        if state_store.consume(request.args["state"]):
+        if state_store.consume(request.args.get("state")):
             client = WebClient()  # no prepared token needed for this
             # Complete the installation by calling oauth.v2.access API method
             oauth_response = client.oauth_v2_access(
                 client_id=os.environ.get("SLACK_CLIENT_ID", None),
                 client_secret=os.environ.get("SLACK_CLIENT_SECRET", None),
-                code=request.args["code"]
+                code=request.args.get("code")
             )
 
             # Check if the request to Slack API was successful
