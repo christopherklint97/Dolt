@@ -9,7 +9,7 @@ The functionality of Dolt can be divided up into two different categories: [task
 ### <a name="tasks"></a>Tasks
 Tasks are the to-do items that you will be creating the most of in the app. There are two different ways for creating tasks. You can use the [web app](dolt.christopherklint.com) to create them or add the Dolt app to your Slack workspace and create tasks right in Slack.
 
-When creating tasks, all you really need is a title to save a task. However, if your want to add more informatio, you can use the following optional paramters:
+When creating tasks, all you really need is a title to save a task. However, if your want to add more information, you can use the following optional parameters:
 - Description
 - Due date
 - Group
@@ -38,7 +38,7 @@ To get the most out of Dolt, you can access your tasks and groups from within Sl
 ```code
 /dolt 
 ```
-Use this command to view all of tasks that are not marked as completed. You can filter the tasks by the following optional parameters:
+Use this command to view all of tasks that are **not** marked as completed. You can filter the tasks by the following optional parameters:
 - $due  
     - Filter tasks based on when the task is due. Replace the word *due* with *today*, *tomorrow*, or *later*.
 - (group_name)
