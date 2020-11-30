@@ -71,7 +71,7 @@ def do_logout():
         del session['sort']
 
 
-######################################################################################
+##########################################################################
 # Home, logging in, logging out
 
 @app.route("/")
@@ -92,7 +92,8 @@ def login():
     # Generate a random value and store it on the server-side
     state = state_store.issue()
 
-    # Build https://slack.com/oauth/v2/authorize with sufficient query parameters
+    # Build https://slack.com/oauth/v2/authorize with sufficient query
+    # parameters
     authorize_url_generator = AuthorizeUrlGenerator(
         client_id=os.environ.get("SLACK_CLIENT_ID", None),
         user_scopes=["identity.basic", "identity.email",
@@ -121,7 +122,7 @@ def login_callback():
             )
 
             # Check if the request to Slack API was successful
-            if oauth_response['ok'] == True:
+            if oauth_response['ok']:
                 # Saving access token for the authenticated user as a variable
                 token = oauth_response['authed_user']['access_token']
 
@@ -132,7 +133,7 @@ def login_callback():
                 )
 
                 # Check if the request to Slack API was successful
-                if user_response['ok'] == True:
+                if user_response['ok']:
                     # Search in db for matching user with Slack ID
                     slack_user_id = user_response['user']['id']
                     user = User.query.filter_by(
@@ -150,8 +151,12 @@ def login_callback():
                         slack_img_url = user_response['user']['image_512']
 
                         # Add user to the db
-                        user = User(name=name, email=email,
-                                    slack_user_id=slack_user_id, slack_team_id=slack_team_id, slack_img_url=slack_img_url)
+                        user = User(
+                            name=name,
+                            email=email,
+                            slack_user_id=slack_user_id,
+                            slack_team_id=slack_team_id,
+                            slack_img_url=slack_img_url)
                         db.session.add(user)
                         db.session.commit()
 
@@ -171,7 +176,7 @@ def logout():
     flash(f"You have been logged out.", "success")
     return redirect("/")
 
-############################################################################################
+##########################################################################
 # API functions
 
 ##################################################
@@ -242,7 +247,7 @@ def star_task():
 
     # Update the task depending on important status
     task = Task.query.get_or_404(id)
-    if task.important == False:
+    if not task.important:
         task.important = True
     else:
         task.important = False
@@ -264,7 +269,7 @@ def complete_task():
 
     # Update the task depending on important status
     task = Task.query.get_or_404(id)
-    if task.completed == False:
+    if not task.completed:
         task.completed = True
     else:
         task.completed = False
@@ -289,7 +294,12 @@ def get_all_tasks():
 
     sort = session.get('sort') or 'recent'
 
-    return render_template('home.html', tasks=tasks, view='all', user=g.user, sort=sort)
+    return render_template(
+        'home.html',
+        tasks=tasks,
+        view='all',
+        user=g.user,
+        sort=sort)
 
 
 @app.route('/tasks/important')
@@ -307,7 +317,12 @@ def get_important_tasks():
 
     sort = session.get('sort') or 'recent'
 
-    return render_template('home.html', tasks=tasks, view='important', user=g.user, sort=sort)
+    return render_template(
+        'home.html',
+        tasks=tasks,
+        view='important',
+        user=g.user,
+        sort=sort)
 
 
 @app.route('/tasks/completed')
@@ -324,7 +339,12 @@ def get_completed_tasks():
 
     sort = session.get('sort') or 'recent'
 
-    return render_template('home.html', tasks=tasks, view='completed', user=g.user, sort=sort)
+    return render_template(
+        'home.html',
+        tasks=tasks,
+        view='completed',
+        user=g.user,
+        sort=sort)
 
 
 @app.route('/tasks/today')
@@ -342,7 +362,12 @@ def get_today_tasks():
 
     sort = session.get('sort') or 'recent'
 
-    return render_template('home.html', tasks=tasks, view='today', user=g.user, sort=sort)
+    return render_template(
+        'home.html',
+        tasks=tasks,
+        view='today',
+        user=g.user,
+        sort=sort)
 
 
 @app.route('/tasks/tomorrow')
@@ -360,7 +385,12 @@ def get_tomorrow_tasks():
 
     sort = session.get('sort') or 'recent'
 
-    return render_template('home.html', tasks=tasks, view='tomorrow', user=g.user, sort=sort)
+    return render_template(
+        'home.html',
+        tasks=tasks,
+        view='tomorrow',
+        user=g.user,
+        sort=sort)
 
 
 @app.route('/tasks/later')
@@ -378,7 +408,12 @@ def get_later_tasks():
 
     sort = session.get('sort') or 'recent'
 
-    return render_template('home.html', tasks=tasks, view='later', user=g.user, sort=sort)
+    return render_template(
+        'home.html',
+        tasks=tasks,
+        view='later',
+        user=g.user,
+        sort=sort)
 
 
 @app.route('/groups/<int:group_id>')
@@ -396,7 +431,12 @@ def get_group_tasks(group_id):
 
     sort = session.get('sort') or 'recent'
 
-    return render_template('home.html', tasks=tasks, view=group_id, user=g.user, sort=sort)
+    return render_template(
+        'home.html',
+        tasks=tasks,
+        view=group_id,
+        user=g.user,
+        sort=sort)
 
 
 @app.route('/tasks/<int:task_id>')
@@ -501,7 +541,7 @@ def sort_tasks(sort):
 
     return redirect('/')
 
-#####################################################################################################
+##########################################################################
 # Slack slash commands
 
 
@@ -518,7 +558,10 @@ def slack_get_tasks():
 
     # Verify that the request actually came from Slack through its signature
     signature = SignatureVerifier(os.environ.get('SLACK_SIGNING_SECRET'))
-    if not signature.is_valid_request(request.get_data(as_text=True), request.headers):
+    if not signature.is_valid_request(
+            request.get_data(
+                as_text=True),
+            request.headers):
         return jsonify(
             response_type='ephemeral',
             text="Sorry, slash commando, that didn't work. Please try again.",
@@ -529,7 +572,8 @@ def slack_get_tasks():
     text = request.form.get('text')
     user = User.query.filter_by(slack_user_id=slack_user_id).first()
 
-    # Declare variables to be used for filtering the tasks based on the slack message
+    # Declare variables to be used for filtering the tasks based on the slack
+    # message
     due_tasks = None
     group_tasks = None
     important_tasks = None
@@ -547,20 +591,22 @@ def slack_get_tasks():
                          .all())
 
         if due.lower() == 'tomorrow':
-            due_tasks = (Task
-                         .query
-                         .filter_by(user_id=user.id)
-                         .filter(Task.due - timedelta(days=1) == date.today().isoformat())
-                         .filter(Task.completed != True)
-                         .all())
+            due_tasks = (
+                Task .query .filter_by(
+                    user_id=user.id) .filter(
+                    Task.due -
+                    timedelta(
+                        days=1) == date.today().isoformat()) .filter(
+                    Task.completed != True) .all())
 
         if due.lower() == 'later':
-            due_tasks = (Task
-                         .query
-                         .filter_by(user_id=user.id)
-                         .filter(Task.due - timedelta(days=2) >= date.today().isoformat())
-                         .filter(Task.completed != True)
-                         .all())
+            due_tasks = (
+                Task .query .filter_by(
+                    user_id=user.id) .filter(
+                    Task.due -
+                    timedelta(
+                        days=2) >= date.today().isoformat()) .filter(
+                    Task.completed != True) .all())
 
     # Find all tasks in group according to parameter
     if text.find('(') != -1:
@@ -579,21 +625,21 @@ def slack_get_tasks():
         important_tasks = (Task
                            .query
                            .filter_by(user_id=user.id)
-                           .filter(Task.important == True)
+                           .filter(Task.important)
                            .filter(Task.completed != True)
                            .all())
 
     # Fetch final tasks based on parameters
     tasks = set()
-    if due_tasks != None:
+    if due_tasks is not None:
         for task in due_tasks:
             tasks.add(task)
 
-    if group_tasks != None:
+    if group_tasks is not None:
         for task in group_tasks:
             tasks.add(task)
 
-    if important_tasks != None:
+    if important_tasks is not None:
         for task in important_tasks:
             tasks.add(task)
 
@@ -633,15 +679,8 @@ def slack_get_tasks():
 
     # If there are no tasks, send a standard message
     if len(blocks) == 2:
-        blocks = [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "You currently have no open tasks. Nice work! :thumbsup:"
-                }
-            }
-        ]
+        blocks = [{"type": "section", "text": {"type": "mrkdwn",
+                                               "text": "You currently have no open tasks. Nice work! :thumbsup:"}}]
 
     return jsonify(
         response_type='in_channel',
@@ -658,7 +697,10 @@ def slack_add_task():
 
     # Verify that the request actually came from Slack through its signature
     signature = SignatureVerifier(os.environ.get('SLACK_SIGNING_SECRET'))
-    if not signature.is_valid_request(request.get_data(as_text=True), request.headers):
+    if not signature.is_valid_request(
+            request.get_data(
+                as_text=True),
+            request.headers):
         return jsonify(
             response_type='ephemeral',
             text="Sorry, slash commando, that didn't work. Please try again.",
@@ -670,7 +712,8 @@ def slack_add_task():
     user = User.query.filter_by(slack_user_id=slack_user_id).first()
 
     try:
-        # Declare optional variables to be used for the new task based on the slack message
+        # Declare optional variables to be used for the new task based on the
+        # slack message
         description = None
         due = Task.due.default.arg
         important = Task.important.default.arg
@@ -696,7 +739,7 @@ def slack_add_task():
             group_name = text.partition('(')[2].partition(')')[0]
 
         # Add the task depending on the group
-        if group_name == None:
+        if group_name is None:
             task = Task(title=title, description=description,
                         due=due, important=important, user_id=user.id)
         else:
@@ -709,15 +752,8 @@ def slack_add_task():
         db.session.commit()
 
         # Success blocks
-        blocks = [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "Success! Your new task is added, now get to work :muscle:"
-                }
-            }
-        ]
+        blocks = [{"type": "section", "text": {"type": "mrkdwn",
+                                               "text": "Success! Your new task is added, now get to work :muscle:"}}]
 
     except Exception as e:
 
@@ -749,7 +785,10 @@ def slack_get_groups():
 
     # Verify that the request actually came from Slack through its signature
     signature = SignatureVerifier(os.environ.get('SLACK_SIGNING_SECRET'))
-    if not signature.is_valid_request(request.get_data(as_text=True), request.headers):
+    if not signature.is_valid_request(
+            request.get_data(
+                as_text=True),
+            request.headers):
         return jsonify(
             response_type='ephemeral',
             text="Sorry, slash commando, that didn't work. Please try again.",
@@ -819,7 +858,10 @@ def slack_add_group():
 
     # Verify that the request actually came from Slack through its signature
     signature = SignatureVerifier(os.environ.get('SLACK_SIGNING_SECRET'))
-    if not signature.is_valid_request(request.get_data(as_text=True), request.headers):
+    if not signature.is_valid_request(
+            request.get_data(
+                as_text=True),
+            request.headers):
         return jsonify(
             response_type='ephemeral',
             text="Sorry, slash commando, that didn't work. Please try again.",
