@@ -1,14 +1,25 @@
-<form action="/api/groups/{{ group.id }}/edit" method="POST" id="edit-group-form">
-    <h2 class="mb-3">Edit group</h2>
-    <div class="form-group">
-        <input type="text" name="group-name" id="group-name" value="{{ group.name }}"
-            class="form-control border-top-0 border-right-0 border-left-0" required>
+<form
+  action="/api/groups/{{ group.id }}/edit"
+  method="POST"
+  id="edit-group-form"
+>
+  <h2 class="mb-3">Edit group</h2>
+  <div class="form-group">
+    <input
+      type="text"
+      name="group-name"
+      id="group-name"
+      value="{{ group.name }}"
+      class="form-control border-top-0 border-right-0 border-left-0"
+      required
+    />
+  </div>
+  <div class="row">
+    <div class="col text-right">
+      <a href="/groups/{{ group.id }}" class="btn btn-outline-secondary btn-sm"
+        >Cancel</a
+      >
+      <button type="submit" class="btn btn-success btn-sm">Save</button>
     </div>
-    <div class="row">
-        <div class="col text-right">
-            <a href="/groups/{{ group.id }}" class="btn btn-outline-secondary btn-sm">Cancel</a>
-            <button type="submit" class="btn btn-success btn-sm">Save</button>
-        </div>
-    </div>
-
+  </div>
 </form>

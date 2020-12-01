@@ -51,8 +51,12 @@ class UserModelTestCase(TestCase):
     def test_user_model(self):
         """Does basic model work?"""
 
-        u = User(name='Beyonce', email="beyonce@boss.com",
-                 slack_user_id="1", slack_team_id='12', slack_img_url='testing3.com')
+        u = User(
+            name='Beyonce',
+            email="beyonce@boss.com",
+            slack_user_id="1",
+            slack_team_id='12',
+            slack_img_url='testing3.com')
 
         db.session.add(u)
         db.session.commit()

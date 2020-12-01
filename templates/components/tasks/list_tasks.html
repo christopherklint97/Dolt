@@ -1,21 +1,21 @@
-{% if tasks %}
+{% if tasks %} 
 
-{% if sort == 'recent' %}
-{% for task in tasks|sort(reverse=true, attribute='created_at') %}
-{% include 'components/tasks/task.html' %}
-{% endfor %}
+{% if sort == 'recent' %} 
+{% for task in tasks|sort(reverse=true, attribute='created_at') %} 
+{% include 'components/tasks/task.html' %} 
+{% endfor %} 
 
-{% elif sort == 'alphabetical' %}
-{% for task in tasks|sort(attribute='title') %}
-{% include 'components/tasks/task.html' %}
-{% endfor %}
+{% elif sort == 'alphabetical' %} 
+{% for task in tasks|sort(attribute='title') %} 
+{% include 'components/tasks/task.html' %} 
+{% endfor %} 
 
-{% elif sort == 'due' %}
+{% elif sort == 'due' %} 
 {% for task in tasks|sort(attribute='due') %}
-{% include 'components/tasks/task.html' %}
-{% endfor %}
+{% include 'components/tasks/task.html' %} 
+{% endfor %} 
+{% endif %} 
 
-{% endif %}
 {% else %}
 <p class="text-center mt-5 font-italic">Add a task to get started!</p>
 {% endif %}

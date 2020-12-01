@@ -1,50 +1,50 @@
 <p class="h6 sidebar-headings">Quick view</p>
 <ul class="nav flex-column">
-    {% if view == 'all' %}
-    <li class="nav-item views active">
-        {% else %}
-    <li class="nav-item views">
-        {% endif %}
-        <a href="/tasks" class="nav-link">Open tasks</a>
-    </li>
-    {% if view == 'important' %}
-    <li class="nav-item views active">
-        {% else %}
-    <li class="nav-item views">
-        {% endif %}
-        <a href="/tasks/important" class="nav-link">Important</a>
-    </li>
-    {% if view == 'completed' %}
-    <li class="nav-item views active">
-        {% else %}
-    <li class="nav-item views">
-        {% endif %}
-        <a href="/tasks/completed" class="nav-link">Completed</a>
-    </li>
+  {% if view == 'all' %}
+  <li class="nav-item views active">{% else %}</li>
+
+  <li class="nav-item views">
+    {% endif %}
+    <a href="/tasks" class="nav-link">Open tasks</a>
+  </li>
+  {% if view == 'important' %}
+  <li class="nav-item views active">{% else %}</li>
+
+  <li class="nav-item views">
+    {% endif %}
+    <a href="/tasks/important" class="nav-link">Important</a>
+  </li>
+  {% if view == 'completed' %}
+  <li class="nav-item views active">{% else %}</li>
+
+  <li class="nav-item views">
+    {% endif %}
+    <a href="/tasks/completed" class="nav-link">Completed</a>
+  </li>
 </ul>
 <p class="h6 sidebar-headings">Due</p>
 <ul class="nav flex-column">
-    {% if view == 'today' %}
-    <li class="nav-item views active">
-        {% else %}
-    <li class="nav-item views">
-        {% endif %}
-        <a href="/tasks/today" class="nav-link">Today</a>
-    </li>
-    {% if view == 'tomorrow' %}
-    <li class="nav-item views active">
-        {% else %}
-    <li class="nav-item views">
-        {% endif %}
-        <a href="/tasks/tomorrow" class="nav-link">Tomorrow</a>
-    </li>
-    {% if view == 'later' %}
-    <li class="nav-item views active">
-        {% else %}
-    <li class="nav-item views">
-        {% endif %}
-        <a href="/tasks/later" class="nav-link">Later</a>
-    </li>
+  {% if view == 'today' %}
+  <li class="nav-item views active">{% else %}</li>
+
+  <li class="nav-item views">
+    {% endif %}
+    <a href="/tasks/today" class="nav-link">Today</a>
+  </li>
+  {% if view == 'tomorrow' %}
+  <li class="nav-item views active">{% else %}</li>
+
+  <li class="nav-item views">
+    {% endif %}
+    <a href="/tasks/tomorrow" class="nav-link">Tomorrow</a>
+  </li>
+  {% if view == 'later' %}
+  <li class="nav-item views active">{% else %}</li>
+
+  <li class="nav-item views">
+    {% endif %}
+    <a href="/tasks/later" class="nav-link">Later</a>
+  </li>
 </ul>
 <p class="h6 sidebar-headings">Groups</p>
 {% include 'components/groups/list_groups.html' %}

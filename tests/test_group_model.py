@@ -42,8 +42,12 @@ class TaskModelTestCase(TestCase):
         db.create_all()
 
         self.uid = 55
-        u = User(name='John Appleseed', email="john@appleseed.com",
-                 slack_user_id="1234", slack_team_id='1234', slack_img_url='testing.com')
+        u = User(
+            name='John Appleseed',
+            email="john@appleseed.com",
+            slack_user_id="1234",
+            slack_team_id='1234',
+            slack_img_url='testing.com')
         u.id = self.uid
         db.session.add(u)
         db.session.commit()

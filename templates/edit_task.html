@@ -1,16 +1,14 @@
-{% extends 'base.html' %}
-
-{% block content %}
+{% extends 'base.html' %} {% block content %}
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-4 col-md-2 p-0" id="sidebar">
-            {% include 'components/sidebar.html' %}
-        </div>
-        <div class="col-8 col-md-10" id="main-dashboard">
-            {% include 'components/tasks/edit_task_form.html' %}
-            {% include 'components/groups/add_group.html' %}
-        </div>
+  <div class="row">
+    <div class="col-4 col-md-2 p-0" id="sidebar">
+      {% include 'components/sidebar.html' %}
     </div>
+    <div class="col-8 col-md-10" id="main-dashboard">
+      {% include 'components/tasks/edit_task_form.html' %} 
+      {% include 'components/groups/add_group.html' %}
+    </div>
+  </div>
 </div>
 
 {% endblock %}

@@ -43,8 +43,12 @@ class TaskViewTestCase(TestCase):
 
         self.client = app.test_client()
 
-        self.testuser = User(name='Janice', email="janice@gmail.com",
-                             slack_user_id="75", slack_team_id='ab43', slack_img_url='testimg2.com')
+        self.testuser = User(
+            name='Janice',
+            email="janice@gmail.com",
+            slack_user_id="75",
+            slack_team_id='ab43',
+            slack_img_url='testimg2.com')
         self.testuser_id = 721
         self.testuser.id = self.testuser_id
 
@@ -76,8 +80,11 @@ class TaskViewTestCase(TestCase):
         """ Do we get redirected if we are not logged in? """
 
         with self.client as c:
-            resp = c.post("api/tasks/new",
-                          data={"title": "Clean the garage"}, follow_redirects=True)
+            resp = c.post(
+                "api/tasks/new",
+                data={
+                    "title": "Clean the garage"},
+                follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Sign in with Slack", str(resp.data))
 
@@ -88,8 +95,11 @@ class TaskViewTestCase(TestCase):
             with c.session_transaction() as sess:
                 sess['CURR_USER_KEY'] = 99222224  # user does not exist
 
-            resp = c.post("api/tasks/new",
-                          data={"title": "Clean the garage"}, follow_redirects=True)
+            resp = c.post(
+                "api/tasks/new",
+                data={
+                    "title": "Clean the garage"},
+                follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
             self.assertIn("Sign in with Slack", str(resp.data))
 

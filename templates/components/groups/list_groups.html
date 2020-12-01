@@ -1,42 +1,68 @@
 <ul class="nav flex-column">
-    {% if user.groups %}
-    {% for group in user.groups %}
-    {% if view == group.id %}
-    <li class="nav-item groups active">
-        {% else %}
-    <li class="nav-item groups">
-        {% endif %}
+  {% if user.groups %} {% for group in user.groups %} {% if view == group.id %}
+  <li class="nav-item groups active">{% else %}</li>
 
-        <div class="btn-group dropright">
-            <a href="/groups/{{ group.id }}" type="button" class="btn btn-link text-left text-decoration-none">
-                {{ group.name }}
-            </a>
-            <button type="button" class="btn btn-link dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"
-                aria-haspopup="true" aria-expanded="false">
-                <span class="sr-only">Toggle Dropright</span>
-            </button>
-            <div class="dropdown-menu">
-                <!-- Dropdown menu links -->
-                <a class="dropdown-item" href="/groups/{{ group.id }}/edit">Edit group</a>
-                <a class="dropdown-item delete-group" href="/api/groups/{{ group.id }}/delete">Delete group</a>
-
-            </div>
-        </div>
-    </li>
-    {% endfor %}
+  <li class="nav-item groups">
     {% endif %}
-    <li class="nav-item groups">
-        <a class="nav-link" id="create-group" data-toggle="modal" data-target="#new-group-modal">
-            <span>
-                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-plus-square" fill="currentColor"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd"
-                        d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z" />
-                    <path fill-rule="evenodd"
-                        d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
-                </svg>
-            </span>
-            Add group
-        </a>
-    </li>
+
+    <div class="btn-group dropright">
+      <a
+        href="/groups/{{ group.id }}"
+        type="button"
+        class="btn btn-link text-left text-decoration-none"
+      >
+        {{ group.name }}
+      </a>
+      <button
+        type="button"
+        class="btn btn-link dropdown-toggle dropdown-toggle-split"
+        data-toggle="dropdown"
+        aria-haspopup="true"
+        aria-expanded="false"
+      >
+        <span class="sr-only">Toggle Dropright</span>
+      </button>
+      <div class="dropdown-menu">
+        <!-- Dropdown menu links -->
+        <a class="dropdown-item" href="/groups/{{ group.id }}/edit"
+          >Edit group</a
+        >
+        <a
+          class="dropdown-item delete-group"
+          href="/api/groups/{{ group.id }}/delete"
+          >Delete group</a
+        >
+      </div>
+    </div>
+  </li>
+  {% endfor %} {% endif %}
+  <li class="nav-item groups">
+    <a
+      class="nav-link"
+      id="create-group"
+      data-toggle="modal"
+      data-target="#new-group-modal"
+    >
+      <span>
+        <svg
+          width="1em"
+          height="1em"
+          viewBox="0 0 16 16"
+          class="bi bi-plus-square"
+          fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"
+          />
+          <path
+            fill-rule="evenodd"
+            d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"
+          />
+        </svg>
+      </span>
+      Add group
+    </a>
+  </li>
 </ul>

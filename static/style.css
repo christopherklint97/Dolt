@@ -1,101 +1,101 @@
 body {
-    font-family: 'Poppins', sans-serif;
-    background-color: #F3F4F6;
+  font-family: "Poppins", sans-serif;
+  background-color: #f3f4f6;
 }
 
 #sidebar {
-    height: 100vh;
-    background-color: #9CC1E7;
-    position: fixed; 
-    color: black;
+  height: 100vh;
+  background-color: #9cc1e7;
+  position: fixed;
+  color: black;
 }
 
-#sidebar a, .btn-link {
-    color: #343A40;
+#sidebar a,
+.btn-link {
+  color: #343a40;
 }
 
 #app {
-    padding: 56px 0;
-    height: 100vh;
+  padding: 56px 0;
+  height: 100vh;
 }
 
 #main-dashboard {
-    left: 33.3vw;
-    padding: 2rem 10vw;
+  left: 33.3vw;
+  padding: 2rem 10vw;
 }
 
 /* Medium devices (tablets, 768px and up) */
-@media (min-width: 768px) { 
-    #main-dashboard {
-        left: 16.6vw;
-        padding: 2rem 20vw;
-    }
-
- }
+@media (min-width: 768px) {
+  #main-dashboard {
+    left: 16.6vw;
+    padding: 2rem 20vw;
+  }
+}
 
 .sidebar-headings {
-    padding-top: 1.5rem;
-    padding-left: 1rem;
-    font-style: italic;
+  padding-top: 1.5rem;
+  padding-left: 1rem;
+  font-style: italic;
 }
 
 #new-task-fields {
-    display: none;
+  display: none;
 }
 
 #create-group {
-    padding-left: 1rem;
-    padding-right: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 .active {
-    background-color: #BDD7EF;
+  background-color: #bdd7ef;
 }
 
 .avatar-img {
-    width: 2rem;
-    height: 2rem;
-    display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
 }
 
 #create-group {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 .task {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 .task:hover {
-    left: 10px;
-    animation: slide 200ms ease;
-    background-color: #EFF5FB;
+  left: 10px;
+  animation: slide 200ms ease;
+  background-color: #eff5fb;
 }
 
 .dropdown-item {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 .btn-link {
-    padding-left: 1rem;
+  padding-left: 1rem;
 }
 
 .card a {
-    text-decoration: none;
-    color: black;
+  text-decoration: none;
+  color: black;
 }
 
 .star {
-    color: #F5CC00;
+  color: #f5cc00;
 }
 
 /* Move tasks on hover */
 @keyframes slide {
-    from {
-        left: 0px;
-    }
+  from {
+    left: 0px;
+  }
 
-    to {
-        left: 10px;
-    }
+  to {
+    left: 10px;
+  }
 }
