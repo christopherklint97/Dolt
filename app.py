@@ -205,7 +205,7 @@ def oauth_start():
     return redirect(url)
 
 
-@app.route("/slack/oauth/callback", methods=["GET"])
+@app.route("/slack/install/callback", methods=["GET"])
 def oauth_callback():
     # Retrieve the auth code and state from the request params
     if "code" in request.args:
