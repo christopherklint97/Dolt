@@ -193,7 +193,7 @@ def oauth_start():
         scopes=["app_mentions:read", "channels:read", "chat:write", "commands", "im:read",
                 "im:write", "incoming-webhook", "reminders:read", "reminders:write", "users:read"],
         user_scopes=["search:read"],
-        redirect_uri='https://dolt.christopherklint.com/slack/oauth/callback'
+        redirect_uri='https://dolt.christopherklint.com/slack/install/callback'
     )
 
     # Generate a random value and store it on the server-side
