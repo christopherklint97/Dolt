@@ -2,17 +2,17 @@ import requests
 from models import db, connect_db, User, Task, Group
 import os
 
-from flask import Flask, render_template, request, flash, redirect, session, cli, url_for, g, jsonify
+from flask import Flask, render_template, request, flash, redirect, session, cli, url_for, g, jsonify, make_response
 from flask_cors import CORS
 from flask_debugtoolbar import DebugToolbarExtension
 
 from slack_sdk.oauth import AuthorizeUrlGenerator
 from slack_sdk.web import WebClient
+from slack_sdk.oauth.installation_store import FileInstallationStore, Installation
 from slack_sdk.oauth.state_store import FileOAuthStateStore
 from slack_sdk.signature import SignatureVerifier
 
 from datetime import date, timedelta
-
 
 app = Flask(__name__)
 
@@ -21,10 +21,6 @@ CORS(app)
 
 # Load .env variables
 cli.load_dotenv('.env')
-
-# Issue and consume state parameter value on the server-side.
-state_store = FileOAuthStateStore(expiration_seconds=300, base_dir="./data")
-
 
 # Get DB_URI from environ variable (useful for production/testing) or,
 # if not set there, use development local db.
@@ -72,7 +68,7 @@ def do_logout():
 
 
 ##########################################################################
-# Home, logging in, logging out
+# Home, logging in, logging out, installing app
 
 @app.route("/")
 def homepage():
@@ -88,6 +84,10 @@ def homepage():
 @app.route("/login")
 def login():
     """Login."""
+
+    # Issue and consume state parameter value on the server-side.
+    state_store = FileOAuthStateStore(
+        expiration_seconds=300, base_dir="./data")
 
     # Generate a random value and store it on the server-side
     state = state_store.issue()
@@ -175,6 +175,90 @@ def logout():
     do_logout()
     flash(f"You have been logged out.", "success")
     return redirect("/")
+
+
+@app.route("/slack/install", methods=["GET"])
+def oauth_start():
+
+    # Issue and consume state parameter value on the server-side.
+    state_store = FileOAuthStateStore(
+        expiration_seconds=300, base_dir="./data")
+
+    # Persist installation data and lookup it by IDs.
+    installation_store = FileInstallationStore(base_dir="./data")
+
+    # Build https://slack.com/oauth/v2/authorize with sufficient query parameters
+    authorize_url_generator = AuthorizeUrlGenerator(
+        client_id=os.environ["SLACK_CLIENT_ID"],
+        scopes=["app_mentions:read", "channels:read", "chat:write", "commands", "im:read",
+                "im:write", "incoming-webhook", "reminders:read", "reminders:write", "users:read"],
+        user_scopes=["search:read"],
+        redirect_uri='https://dolt.christopherklint.com/slack/oauth/callback'
+    )
+
+    # Generate a random value and store it on the server-side
+    state = state_store.issue()
+
+    # https://slack.com/oauth/v2/authorize?state=(generated value)&client_id={client_id}&scope=app_mentions:read,chat:write&user_scope=search:read
+    url = authorize_url_generator.generate(state)
+
+    return redirect(url)
+
+
+@app.route("/slack/oauth/callback", methods=["GET"])
+def oauth_callback():
+    # Retrieve the auth code and state from the request params
+    if "code" in request.args:
+        # Verify the state parameter
+        if state_store.consume(request.args["state"]):
+            client = WebClient()  # no prepared token needed for this
+            # Complete the installation by calling oauth.v2.access API method
+            oauth_response = client.oauth_v2_access(
+                client_id=client_id,
+                client_secret=client_secret,
+                redirect_uri=redirect_uri,
+                code=request.args["code"]
+            )
+
+            installed_enterprise = oauth_response.get("enterprise") or {}
+            installed_team = oauth_response.get("team") or {}
+            installer = oauth_response.get("authed_user") or {}
+            incoming_webhook = oauth_response.get("incoming_webhook") or {}
+            bot_token = oauth_response.get("access_token")
+            # NOTE: As oauth.v2.access doesn't include bot_id in response,
+            # we call bots.info for storing the installation data along with bot_id.
+            bot_id = None
+            if bot_token is not None:
+                auth_test = client.auth_test(token=bot_token)
+                bot_id = auth_test["bot_id"]
+
+            # Build an installation data
+            installation = Installation(
+                app_id=oauth_response.get("app_id"),
+                enterprise_id=installed_enterprise.get("id"),
+                team_id=installed_team.get("id"),
+                bot_token=bot_token,
+                bot_id=bot_id,
+                bot_user_id=oauth_response.get("bot_user_id"),
+                bot_scopes=oauth_response.get(
+                    "scope"),  # comma-separated string
+                user_id=installer.get("id"),
+                user_token=installer.get("access_token"),
+                user_scopes=installer.get("scope"),  # comma-separated string
+                incoming_webhook_url=incoming_webhook.get("url"),
+                incoming_webhook_channel_id=incoming_webhook.get("channel_id"),
+                incoming_webhook_configuration_url=incoming_webhook.get(
+                    "configuration_url"),
+            )
+            # Store the installation
+            installation_store.save(installation)
+
+            return "Thanks for installing this app!"
+        else:
+            return make_response(f"Try the installation again (the state value is already expired)", 400)
+
+    error = request.args["error"] if "error" in request.args else ""
+    return make_response(f"Something is wrong with the installation (error: {error})", 400)
 
 ##########################################################################
 # API functions
@@ -567,125 +651,143 @@ def slack_get_tasks():
             text="Sorry, slash commando, that didn't work. Please try again.",
         )
 
-    # Given the slack user id, extract the user and needed data
-    slack_user_id = request.form.get('user_id')
-    text = request.form.get('text')
-    user = User.query.filter_by(slack_user_id=slack_user_id).first()
+    try:
+        # in the case where this app gets a request from an Enterprise Grid workspace
+        enterprise_id = request.form.get("enterprise_id")
+        # The workspace's ID
+        team_id = request.form["team_id"]
+        # Lookup the stored bot token for this workspace
+        bot = installation_store.find_bot(
+            enterprise_id=enterprise_id,
+            team_id=team_id,
+        )
+        bot_token = bot.bot_token if bot else None
+        if not bot_token:
+            # The app may be uninstalled or be used in a shared channel
+            return make_response("Please install this app first!", 200)
 
-    # Declare variables to be used for filtering the tasks based on the slack
-    # message
-    due_tasks = None
-    group_tasks = None
-    important_tasks = None
+        # Given the slack user id, extract the user and needed data
+        slack_user_id = request.form.get('user_id')
+        text = request.form.get('text')
+        user = User.query.filter_by(slack_user_id=slack_user_id).first()
 
-    # Find all tasks due according to parameter
-    if text.find('$') != -1:
-        due = text.partition('$')[2].partition(' ')[0]
+        # Declare variables to be used for filtering the tasks based on the slack
+        # message
+        due_tasks = None
+        group_tasks = None
+        important_tasks = None
 
-        if due.lower() == 'today':
-            due_tasks = (Task
-                         .query
-                         .filter_by(user_id=user.id)
-                         .filter(Task.due <= date.today().isoformat())
-                         .filter(Task.completed != True)
-                         .all())
+        # Find all tasks due according to parameter
+        if text.find('$') != -1:
+            due = text.partition('$')[2].partition(' ')[0]
 
-        if due.lower() == 'tomorrow':
-            due_tasks = (
-                Task .query .filter_by(
-                    user_id=user.id) .filter(
-                    Task.due -
-                    timedelta(
-                        days=1) == date.today().isoformat()) .filter(
-                    Task.completed != True) .all())
+            if due.lower() == 'today':
+                due_tasks = (Task
+                             .query
+                             .filter_by(user_id=user.id)
+                             .filter(Task.due <= date.today().isoformat())
+                             .filter(Task.completed != True)
+                             .all())
 
-        if due.lower() == 'later':
-            due_tasks = (
-                Task .query .filter_by(
-                    user_id=user.id) .filter(
-                    Task.due -
-                    timedelta(
-                        days=2) >= date.today().isoformat()) .filter(
-                    Task.completed != True) .all())
+            if due.lower() == 'tomorrow':
+                due_tasks = (
+                    Task .query .filter_by(
+                        user_id=user.id) .filter(
+                        Task.due -
+                        timedelta(
+                            days=1) == date.today().isoformat()) .filter(
+                        Task.completed != True) .all())
 
-    # Find all tasks in group according to parameter
-    if text.find('(') != -1:
-        group = text.partition('(')[2].partition(')')[0]
+            if due.lower() == 'later':
+                due_tasks = (
+                    Task .query .filter_by(
+                        user_id=user.id) .filter(
+                        Task.due -
+                        timedelta(
+                            days=2) >= date.today().isoformat()) .filter(
+                        Task.completed != True) .all())
 
-        group_tasks = (Task
-                       .query
-                       .filter_by(user_id=user.id)
-                       .filter(Task.group == group)
-                       .filter(Task.completed != True)
-                       .all())
+        # Find all tasks in group according to parameter
+        if text.find('(') != -1:
+            group = text.partition('(')[2].partition(')')[0]
 
-    # Find all important tasks according to parameter
-    if text.find('*') != -1:
-
-        important_tasks = (Task
+            group_tasks = (Task
                            .query
                            .filter_by(user_id=user.id)
-                           .filter(Task.important)
+                           .filter(Task.group == group)
                            .filter(Task.completed != True)
                            .all())
 
-    # Fetch final tasks based on parameters
-    tasks = set()
-    if due_tasks is not None:
-        for task in due_tasks:
-            tasks.add(task)
+        # Find all important tasks according to parameter
+        if text.find('*') != -1:
 
-    if group_tasks is not None:
-        for task in group_tasks:
-            tasks.add(task)
+            important_tasks = (Task
+                               .query
+                               .filter_by(user_id=user.id)
+                               .filter(Task.important)
+                               .filter(Task.completed != True)
+                               .all())
 
-    if important_tasks is not None:
-        for task in important_tasks:
-            tasks.add(task)
+        # Fetch final tasks based on parameters
+        tasks = set()
+        if due_tasks is not None:
+            for task in due_tasks:
+                tasks.add(task)
 
-    if len(tasks) == 0:
-        tasks = (Task
-                 .query
-                 .filter_by(user_id=user.id)
-                 .filter(Task.completed != True)
-                 .all())
+        if group_tasks is not None:
+            for task in group_tasks:
+                tasks.add(task)
 
-    # Construct the blocks for the slack message
-    blocks = [
-        {
-            "type": "header",
-            "text": {
+        if important_tasks is not None:
+            for task in important_tasks:
+                tasks.add(task)
+
+        if len(tasks) == 0:
+            tasks = (Task
+                     .query
+                     .filter_by(user_id=user.id)
+                     .filter(Task.completed != True)
+                     .all())
+
+        # Construct the blocks for the slack message
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                        "type": "plain_text",
+                        "text": "Here are all of your open tasks",
+                        "emoji": True
+                }
+            },
+            {
+                "type": "divider"
+            }
+        ]
+
+        # Loop through the tasks and add them to the blocks
+        for task in tasks:
+            dict_task = {
+                "type": "section",
+                "text": {
                     "type": "plain_text",
-                    "text": "Here are all of your open tasks",
+                    "text": f"{task.title}",
                     "emoji": True
+                }
             }
-        },
-        {
-            "type": "divider"
-        }
-    ]
+            blocks.append(dict_task)
 
-    # Loop through the tasks and add them to the blocks
-    for task in tasks:
-        dict_task = {
-            "type": "section",
-            "text": {
-                "type": "plain_text",
-                "text": f"{task.title}",
-                "emoji": True
-            }
-        }
-        blocks.append(dict_task)
+        # If there are no tasks, send a standard message
+        if len(blocks) == 2:
+            blocks = [{"type": "section", "text": {"type": "mrkdwn",
+                                                   "text": "You currently have no open tasks. Nice work! :thumbsup:"}}]
 
-    # If there are no tasks, send a standard message
-    if len(blocks) == 2:
-        blocks = [{"type": "section", "text": {"type": "mrkdwn",
-                                               "text": "You currently have no open tasks. Nice work! :thumbsup:"}}]
+        return jsonify(
+            response_type='in_channel',
+            blocks=blocks,
+        )
 
-    return jsonify(
-        response_type='in_channel',
-        blocks=blocks,
-    )
+    # Indicate unsupported request patterns
+    return make_response("", 404)
 
 
 @app.route('/slack/tasks/new', methods=['POST'])
@@ -705,6 +807,20 @@ def slack_add_task():
             response_type='ephemeral',
             text="Sorry, slash commando, that didn't work. Please try again.",
         )
+
+    # in the case where this app gets a request from an Enterprise Grid workspace
+    enterprise_id = request.form.get("enterprise_id")
+    # The workspace's ID
+    team_id = request.form["team_id"]
+    # Lookup the stored bot token for this workspace
+    bot = installation_store.find_bot(
+        enterprise_id=enterprise_id,
+        team_id=team_id,
+    )
+    bot_token = bot.bot_token if bot else None
+    if not bot_token:
+        # The app may be uninstalled or be used in a shared channel
+        return make_response("Please install this app first!", 200)
 
     # Given the slack user id, extract the user and needed data
     slack_user_id = request.form.get('user_id')
@@ -794,6 +910,20 @@ def slack_get_groups():
             text="Sorry, slash commando, that didn't work. Please try again.",
         )
 
+    # in the case where this app gets a request from an Enterprise Grid workspace
+    enterprise_id = request.form.get("enterprise_id")
+    # The workspace's ID
+    team_id = request.form["team_id"]
+    # Lookup the stored bot token for this workspace
+    bot = installation_store.find_bot(
+        enterprise_id=enterprise_id,
+        team_id=team_id,
+    )
+    bot_token = bot.bot_token if bot else None
+    if not bot_token:
+        # The app may be uninstalled or be used in a shared channel
+        return make_response("Please install this app first!", 200)
+
     # Given the slack user id, extract the user and needed data
     slack_user_id = request.form.get('user_id')
     user = User.query.filter_by(slack_user_id=slack_user_id).first()
@@ -866,6 +996,20 @@ def slack_add_group():
             response_type='ephemeral',
             text="Sorry, slash commando, that didn't work. Please try again.",
         )
+
+    # in the case where this app gets a request from an Enterprise Grid workspace
+    enterprise_id = request.form.get("enterprise_id")
+    # The workspace's ID
+    team_id = request.form["team_id"]
+    # Lookup the stored bot token for this workspace
+    bot = installation_store.find_bot(
+        enterprise_id=enterprise_id,
+        team_id=team_id,
+    )
+    bot_token = bot.bot_token if bot else None
+    if not bot_token:
+        # The app may be uninstalled or be used in a shared channel
+        return make_response("Please install this app first!", 200)
 
     # Given the slack user id, extract the user and needed data
     slack_user_id = request.form.get('user_id')

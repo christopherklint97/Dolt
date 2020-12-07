@@ -53,14 +53,8 @@ async function addNewGroup(e) {
 
 /* Hide all of the new task fields */
 function hideNewTaskFields(e) {
-  if (
-    e.target.tagName !== "INPUT" &&
-    e.target.tagName !== "SELECT" &&
-    e.target.tagName !== "TEXTAREA"
-  ) {
-    const newTaskFields = $("#new-task-fields");
-    newTaskFields.hide();
-  }
+  const newTaskFields = $("#new-task-fields");
+  newTaskFields.hide();
 }
 
 /* Show the new task fields on focus */
@@ -108,7 +102,6 @@ async function completeTasks(e) {
 function addEventListeners() {
   const newTaskForm = $("#new-task-form");
   const newTaskTitle = $("#new-task-title");
-  const app = $("#app");
   const cancelBtn = $("#cancel-btn");
   const addGroupModal = $("#new-group-modal");
   const addGroupForm = $("#add-group-form");
@@ -121,7 +114,6 @@ function addEventListeners() {
 
   // Focus and click events for showing and hiding new task fields
   newTaskTitle.on("focus", showNewTaskFields);
-  app.on("click", hideNewTaskFields);
   cancelBtn.on("click", hideNewTaskFields);
 
   // Implement add group modal on click

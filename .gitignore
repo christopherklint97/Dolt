@@ -1,0 +1,7 @@
+.vscode
+venv
+.pylintrc
+__pycache__
+.env
+data
+ngrok
