@@ -32,6 +32,22 @@ The Slack integration is composed of two different elements:
 1. Logging into the web app with Slack using Oauth
 2. Viewing and adding tasks and groups inside your Slack workspace with slash commands
 
+## Add Dolt to your Slack workspace
+
+To take full advantage of the Slack integration, add Dolt to your Slack workspace
+
+<a href="slack/install"
+        ><img
+          alt="Add to Slack"
+          height="40"
+          width="139"
+          src="https://platform.slack-edge.com/img/add_to_slack.png"
+          srcset="
+            https://platform.slack-edge.com/img/add_to_slack.png    1x,
+            https://platform.slack-edge.com/img/add_to_slack@2x.png 2x
+          "
+      /></a>
+
 ### Oauth
 
 Logging in with Slack is nothing that you need to stress about. It is simply a handy feature that syncs your tasks and groups with your Slack account.
