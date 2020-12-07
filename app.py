@@ -16,6 +16,13 @@ from datetime import date, timedelta
 
 app = Flask(__name__)
 
+# Issue and consume state parameter value on the server-side.
+state_store = FileOAuthStateStore(
+    expiration_seconds=300, base_dir="./data")
+
+# Persist installation data and lookup it by IDs.
+installation_store = FileInstallationStore(base_dir="./data")
+
 # Activate CORS for flask app
 CORS(app)
 
@@ -84,10 +91,6 @@ def homepage():
 @app.route("/login")
 def login():
     """Login."""
-
-    # Issue and consume state parameter value on the server-side.
-    state_store = FileOAuthStateStore(
-        expiration_seconds=300, base_dir="./data")
 
     # Generate a random value and store it on the server-side
     state = state_store.issue()
@@ -179,13 +182,7 @@ def logout():
 
 @app.route("/slack/install", methods=["GET"])
 def oauth_start():
-
-    # Issue and consume state parameter value on the server-side.
-    state_store = FileOAuthStateStore(
-        expiration_seconds=300, base_dir="./data")
-
-    # Persist installation data and lookup it by IDs.
-    installation_store = FileInstallationStore(base_dir="./data")
+    """ Install slack app. """
 
     # Build https://slack.com/oauth/v2/authorize with sufficient query parameters
     authorize_url_generator = AuthorizeUrlGenerator(
@@ -207,10 +204,12 @@ def oauth_start():
 
 @app.route("/slack/install/callback", methods=["GET"])
 def oauth_callback():
+    """ Handle callback for installing the app """
+
     # Retrieve the auth code and state from the request params
     if "code" in request.args:
         # Verify the state parameter
-        if state_store.consume(request.args["state"]):
+        if state_store.consume(request.args.get("state")):
             client = WebClient()  # no prepared token needed for this
             # Complete the installation by calling oauth.v2.access API method
             oauth_response = client.oauth_v2_access(
@@ -253,7 +252,7 @@ def oauth_callback():
             # Store the installation
             installation_store.save(installation)
 
-            return "Thanks for installing this app!"
+            return redirect(url_for('homepage'))
         else:
             return make_response(f"Try the installation again (the state value is already expired)", 400)
 
