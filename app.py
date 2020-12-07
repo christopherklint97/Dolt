@@ -252,7 +252,7 @@ def oauth_callback():
             # Store the installation
             installation_store.save(installation)
 
-            return redirect(url_for('homepage'))
+            return redirect(url_for('login'))
         else:
             return make_response(f"Try the installation again (the state value is already expired)", 400)
 
