@@ -785,9 +785,11 @@ def slack_get_tasks():
             response_type='in_channel',
             blocks=blocks,
         )
+    except Exception as e:
+        print(e)
 
-    # Indicate unsupported request patterns
-    return make_response("", 404)
+        # Indicate unsupported request patterns
+        return make_response("", 404)
 
 
 @app.route('/slack/tasks/new', methods=['POST'])
