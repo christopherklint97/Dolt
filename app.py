@@ -215,7 +215,7 @@ def oauth_callback():
             oauth_response = client.oauth_v2_access(
                 client_id=os.environ.get("SLACK_CLIENT_ID", None),
                 client_secret=os.environ.get("SLACK_CLIENT_SECRET", None),
-                redirect_uri='https://dolt.christopherklint.com/slack/install/callback'
+                redirect_uri='https://dolt.christopherklint.com/slack/install/callback',
                 code=request.args.get("code")
             )
 
