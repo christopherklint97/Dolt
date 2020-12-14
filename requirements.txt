@@ -1,4 +1,3 @@
-apturl
 autopep8
 backcall
 bcrypt
