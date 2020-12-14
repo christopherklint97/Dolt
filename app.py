@@ -14,6 +14,16 @@ from slack_sdk.signature import SignatureVerifier
 
 from datetime import date, timedelta
 
+# Sentry.io setup
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
+
+sentry_sdk.init(
+    dsn="https://af813549178e4121bfa649c1bf9b559f@o491440.ingest.sentry.io/5557036",
+    integrations=[FlaskIntegration()],
+    traces_sample_rate=1.0
+)
+
 app = Flask(__name__)
 
 # Issue and consume state parameter value on the server-side.
@@ -100,7 +110,8 @@ def login():
     authorize_url_generator = AuthorizeUrlGenerator(
         client_id=os.environ.get("SLACK_CLIENT_ID", None),
         user_scopes=["identity.basic", "identity.email",
-                     "identity.team", "identity.avatar"]
+                     "identity.team", "identity.avatar"],
+        redirect_uri='https://dolt.christopherklint.com/login/callback'
     )
 
     redirect_uri = authorize_url_generator.generate(state)
@@ -121,6 +132,7 @@ def login_callback():
             oauth_response = client.oauth_v2_access(
                 client_id=os.environ.get("SLACK_CLIENT_ID", None),
                 client_secret=os.environ.get("SLACK_CLIENT_SECRET", None),
+                redirect_uri='https://dolt.christopherklint.com/login/callback',
                 code=request.args.get("code")
             )
 
@@ -196,7 +208,6 @@ def oauth_start():
     # Generate a random value and store it on the server-side
     state = state_store.issue()
 
-    # https://slack.com/oauth/v2/authorize?state=(generated value)&client_id={client_id}&scope=app_mentions:read,chat:write&user_scope=search:read
     url = authorize_url_generator.generate(state)
 
     return redirect(url)
@@ -276,7 +287,7 @@ def new_task():
     title = request.json.get('title')
     description = request.json.get('description')
     date = request.json.get('date') or Task.due.default.arg
-    if not request.json.get('group'):
+    if request.json.get('group') == 'None':
         task = Task(title=title, description=description,
                     due=date, user_id=g.user.id)
     else:
@@ -651,19 +662,6 @@ def slack_get_tasks():
         )
 
     try:
-        # in the case where this app gets a request from an Enterprise Grid workspace
-        enterprise_id = request.form.get("enterprise_id")
-        # The workspace's ID
-        team_id = request.form["team_id"]
-        # Lookup the stored bot token for this workspace
-        bot = installation_store.find_bot(
-            enterprise_id=enterprise_id,
-            team_id=team_id,
-        )
-        bot_token = bot.bot_token if bot else None
-        if not bot_token:
-            # The app may be uninstalled or be used in a shared channel
-            return make_response("Please install this app first!", 200)
 
         # Given the slack user id, extract the user and needed data
         slack_user_id = request.form.get('user_id')
@@ -718,7 +716,7 @@ def slack_get_tasks():
                            .all())
 
         # Find all important tasks according to parameter
-        if text.find('*') != -1:
+        if text.find('*') != 1:
 
             important_tasks = (Task
                                .query
@@ -809,20 +807,6 @@ def slack_add_task():
             text="Sorry, slash commando, that didn't work. Please try again.",
         )
 
-    # in the case where this app gets a request from an Enterprise Grid workspace
-    enterprise_id = request.form.get("enterprise_id")
-    # The workspace's ID
-    team_id = request.form["team_id"]
-    # Lookup the stored bot token for this workspace
-    bot = installation_store.find_bot(
-        enterprise_id=enterprise_id,
-        team_id=team_id,
-    )
-    bot_token = bot.bot_token if bot else None
-    if not bot_token:
-        # The app may be uninstalled or be used in a shared channel
-        return make_response("Please install this app first!", 200)
-
     # Given the slack user id, extract the user and needed data
     slack_user_id = request.form.get('user_id')
     text = request.form.get('text')
@@ -831,7 +815,7 @@ def slack_add_task():
     try:
         # Declare optional variables to be used for the new task based on the
         # slack message
-        description = None
+        description = ''
         due = Task.due.default.arg
         important = Task.important.default.arg
         group_name = None
@@ -840,8 +824,9 @@ def slack_add_task():
         title = text.partition('"')[2].partition('"')[0]
 
         # Parse the description from the slack text
-        if text.find('<') != -1:
-            description = text.partition('<')[2].partition('>')[0]
+        if text.count('"') == 4:
+            description = text.partition('"')[2].partition('"')[
+                2].partition('"')[2].partition('"')[0]
 
         # Parse the due date from the slack text
         if text.find('$') != -1:
@@ -862,7 +847,7 @@ def slack_add_task():
         else:
             group = Group.query.filter_by(name=group_name).first()
             task = Task(title=title, description=description,
-                        due=due, group_id=group.id, user_id=user.id)
+                        due=due, group_id=group.id, important=important, user_id=user.id)
 
         # Add the new task
         db.session.add(task)
@@ -910,20 +895,6 @@ def slack_get_groups():
             response_type='ephemeral',
             text="Sorry, slash commando, that didn't work. Please try again.",
         )
-
-    # in the case where this app gets a request from an Enterprise Grid workspace
-    enterprise_id = request.form.get("enterprise_id")
-    # The workspace's ID
-    team_id = request.form["team_id"]
-    # Lookup the stored bot token for this workspace
-    bot = installation_store.find_bot(
-        enterprise_id=enterprise_id,
-        team_id=team_id,
-    )
-    bot_token = bot.bot_token if bot else None
-    if not bot_token:
-        # The app may be uninstalled or be used in a shared channel
-        return make_response("Please install this app first!", 200)
 
     # Given the slack user id, extract the user and needed data
     slack_user_id = request.form.get('user_id')
@@ -997,20 +968,6 @@ def slack_add_group():
             response_type='ephemeral',
             text="Sorry, slash commando, that didn't work. Please try again.",
         )
-
-    # in the case where this app gets a request from an Enterprise Grid workspace
-    enterprise_id = request.form.get("enterprise_id")
-    # The workspace's ID
-    team_id = request.form["team_id"]
-    # Lookup the stored bot token for this workspace
-    bot = installation_store.find_bot(
-        enterprise_id=enterprise_id,
-        team_id=team_id,
-    )
-    bot_token = bot.bot_token if bot else None
-    if not bot_token:
-        # The app may be uninstalled or be used in a shared channel
-        return make_response("Please install this app first!", 200)
 
     # Given the slack user id, extract the user and needed data
     slack_user_id = request.form.get('user_id')

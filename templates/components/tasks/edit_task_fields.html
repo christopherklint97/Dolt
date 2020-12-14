@@ -6,9 +6,7 @@
       rows="5"
       placeholder="Describe what the task is..."
       class="form-control"
-    >
-{{ task.description }}</textarea
-    >
+    >{% if task.description %}{{ task.description }}{% endif %}</textarea>
   </div>
   <div class="row">
     <div class="col-12 col-md-4 mb-3">
