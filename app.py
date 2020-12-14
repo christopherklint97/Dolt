@@ -14,16 +14,6 @@ from slack_sdk.signature import SignatureVerifier
 
 from datetime import date, timedelta
 
-# Sentry.io setup
-import sentry_sdk
-from sentry_sdk.integrations.flask import FlaskIntegration
-
-sentry_sdk.init(
-    dsn="https://af813549178e4121bfa649c1bf9b559f@o491440.ingest.sentry.io/5557036",
-    integrations=[FlaskIntegration()],
-    traces_sample_rate=1.0
-)
-
 app = Flask(__name__)
 
 # Issue and consume state parameter value on the server-side.
